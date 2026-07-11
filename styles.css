@@ -1,6 +1,6 @@
 :root{--forest:#1c4f32;--cream:#f8f4ec;--butter:#ffd166;--lilac:#dfbfff;--grape:#9669c4;--pink:#ffb4c8;--lime:#c3ec9f;--olive:#678d47;--ink:#18372a;--white:#fffdf8;--line:#173c2c;--shadow:6px 8px 0 rgba(28,79,50,.16)}
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;overflow-x:hidden}
 body{margin:0;background:var(--cream);color:var(--ink);  font-family:'Nunito','Quicksand',sans-serif;
   --font-titles:'Fredoka',sans-serif;
   --font-body:'Nunito','Quicksand',sans-serif;
