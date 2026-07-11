@@ -41,6 +41,48 @@ function catToSlug(name, id) {
   return n.replace(/\s+/g, '_').replace(/[^\w-]/g, '');
 }
 
+// JSON-LD Product schema para rich snippets — solo con productos reales de Supabase,
+// nunca con defaultProducts (serían datos falsos indexados por Google).
+function injectProductSchema(products) {
+  const items = products
+    .filter(p => p.name)
+    .map((p, index) => {
+      const price = p.priceMin > 0 ? p.priceMin : (parseFloat(String(p.price).replace(/[^\d.]/g, '')) || undefined);
+      const product = {
+        '@type': 'Product',
+        name: p.name,
+        description: p.desc || undefined,
+        image: p.mainImage ? [p.mainImage] : undefined,
+        category: p.category || undefined
+      };
+      if (price) {
+        product.offers = {
+          '@type': 'Offer',
+          priceCurrency: 'MXN',
+          price: price,
+          availability: 'https://schema.org/InStock',
+          url: 'https://catalogo.manekistore.com.mx/'
+        };
+      }
+      return { '@type': 'ListItem', position: index + 1, item: product };
+    });
+
+  const schema = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    itemListElement: items
+  };
+
+  let script = document.getElementById('product-schema');
+  if (!script) {
+    script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.id = 'product-schema';
+    document.head.appendChild(script);
+  }
+  script.textContent = JSON.stringify(schema);
+}
+
 async function loadProducts() {
   // ── CATEGORÍAS DE SUPABASE (solo sincronizar labels, NO productos) ──
   if (typeof supaGet !== 'undefined') {
@@ -76,6 +118,7 @@ async function loadProducts() {
 
       filteredProducts = [...allProducts];
       renderCatalog();
+      injectProductSchema(allProducts);
       if (typeof calibrateSlider === 'function') calibrateSlider();
       return;
     } catch (e) {
