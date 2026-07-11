@@ -1,0 +1,13 @@
+{
+  "scripts": {
+    "build": "npm run build:css && npm run build:js",
+    "build:css": "esbuild styles.css --minify --outfile=dist/styles.min.css",
+    "build:js": "esbuild catalogo.js --minify --outfile=dist/catalogo.min.js"
+  },
+  "dependencies": {
+    "sharp": "^0.35.3"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  }
+}

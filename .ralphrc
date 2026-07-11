@@ -1,0 +1,7 @@
+{
+  "project": "bicho-capricho-catalogo-2026",
+  "workdir": "F:/PROYECTOS/BICHO CAPRICHO/CATALOGO 2026",
+  "allowedTools": ["Read", "Edit", "Write", "Grep", "Glob", "Bash"],
+  "maxIterations": 20,
+  "notes": "Sin git en este proyecto. No usar comandos git. Verificacion manual via python -m http.server, no hay test runner."
+}
