@@ -122,6 +122,12 @@
           </div>
         </div>
 
+        <!-- Recién agregado -->
+        <div id="recien-agregado-section" style="display:none; margin-bottom:24px;">
+          <h3 style="font-family:'Fredoka',sans-serif; font-size:18px; margin-bottom:12px;">🆕 Recién agregado</h3>
+          <div id="recien-agregado-list" style="display:flex; gap:14px; overflow-x:auto; padding-bottom:8px;"></div>
+        </div>
+
         <div class="search-container">
           <div class="search-box">
             <span class="search-icon">🔍</span>
@@ -362,7 +368,10 @@
         </div>
         <!-- Detalles -->
         <div class="p-modal-info">
-          <span class="pm-category" id="pm-category">Categoría</span>
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">
+            <span class="pm-category" id="pm-category">Categoría</span>
+            <button type="button" class="pm-share-btn" id="pm-share-btn" aria-label="Compartir producto" title="Compartir">↗ Compartir</button>
+          </div>
           <h3 class="pm-title" id="pm-title">Nombre Producto</h3>
           <p class="pm-desc" id="pm-desc">Descripción larga...</p>
           

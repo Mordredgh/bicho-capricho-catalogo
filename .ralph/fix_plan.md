@@ -90,6 +90,49 @@
 - [x] Overflow horizontal (`.side-sticker.sticker-right-1`) — verificado en
       vivo 2026-07-12, `canScrollRight: 0`.
 
+## Accesibilidad + perf modal — CERRADO (2026-07-12)
+
+- [x] Wishlist auditada — ya completa (localStorage + panel + WhatsApp),
+      no requería cambios.
+- [x] Carrusel del modal: `alt` real con nombre de producto + índice de
+      foto (antes vacío).
+- [x] Foco accesible: modal mueve foco al botón cerrar al abrir, regresa
+      al elemento disparador al cerrar.
+- [x] Imágenes del carrusel con `loading="lazy"` (excepto primera) +
+      fade-in CSS al cargar.
+
+## Panel admin: 5 mejoras de flujo — CERRADO (2026-07-12)
+
+- [x] Buscador por nombre en tabla de productos.
+- [x] Botón duplicar producto (clona todo + "(copia)" en nombre).
+- [x] Toggle rápido de agotado desde la tabla (sin abrir modal).
+- [x] Reordenar galería de fotos arrastrando miniaturas.
+- [x] Exportar catálogo completo a CSV.
+
+## Panel admin: guardas y bulk — CERRADO (2026-07-12)
+
+- [x] Aviso de cambios sin guardar al cerrar modal de producto.
+- [x] Selección múltiple + acciones en bloque (agotado/disponible/eliminar).
+- [x] Descartado a propósito: CRUD de categorías en admin — Gerardo las
+      controla desde el POS de Bicho Capricho, no tocar.
+
+## Ronda brainstorming: 8 mejoras admin + catálogo — CERRADO (2026-07-12)
+
+- [x] Preview en vivo del producto en el modal admin (panel lateral que
+      actualiza nombre/precio/desc/foto mientras editas).
+- [x] Snackbar "Deshacer" 5s al eliminar (individual y en bloque) —
+      reemplaza el borrado inmediato tras confirmar.
+- [x] Dashboard de pendientes: chips clicables "sin foto" / "sin
+      descripción" que filtran la tabla.
+- [x] Compresión de fotos individuales — ya existía (`compressImage`,
+      800px + WebP), no requería cambios.
+- [x] Botón "Compartir" (Web Share API + fallback copiar link) en el
+      modal público — incluye deep link nuevo `?producto=<id>`.
+- [x] Sección "Recién agregado" en el catálogo público, usa `created_at`.
+- [x] QR descargable del catálogo completo y por colección (admin,
+      vía api.qrserver.com, abre en pestaña para guardar).
+- [x] Productos agotados van al final del listado público, no mezclados.
+
 ## Optional / Future
 
 - [ ] Code-splitting de `catalogo.js`/`admin.html` si el proyecto migra a

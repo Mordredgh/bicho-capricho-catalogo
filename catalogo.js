@@ -116,7 +116,8 @@ async function loadProducts() {
         freeShipping: p.free_shipping || false,
         mockClass:    p.mock_class || 'tote',
         coleccion:    p.coleccion || '',
-        precioEstampadoDesde: parseFloat(p.precio_estampado_desde) || 0
+        precioEstampadoDesde: parseFloat(p.precio_estampado_desde) || 0,
+        createdAt:    p.created_at || ''
       }));
 
       // Solo mostrar colecciones que de verdad tienen al menos un producto activo
@@ -128,9 +129,11 @@ async function loadProducts() {
 
       filteredProducts = [...allProducts];
       renderCatalog();
+      renderRecienAgregado(allProducts);
       injectProductSchema(allProducts);
       if (typeof calibrateSlider === 'function') calibrateSlider();
       applyColeccionFromUrl();
+      applyProductoFromUrl();
       return;
     } catch (e) {
       console.warn('Supabase no disponible, usando defaults:', e.message);
@@ -273,9 +276,15 @@ function renderCatalog() {
     return;
   }
 
+  // Agotados van al final del listado, no mezclados con los disponibles
+  const sortedForDisplay = [
+    ...filteredProducts.filter(p => p.badge !== 'agotado'),
+    ...filteredProducts.filter(p => p.badge === 'agotado')
+  ];
+
   const chunks = [];
-  for (let i = 0; i < filteredProducts.length; i += 8) {
-    chunks.push(filteredProducts.slice(i, i + 8));
+  for (let i = 0; i < sortedForDisplay.length; i += 8) {
+    chunks.push(sortedForDisplay.slice(i, i + 8));
   }
 
   let html = '';
@@ -479,6 +488,36 @@ function applyColeccionFromUrl() {
   setColeccionActiva(target);
   const catalogSection = document.getElementById('catalogo');
   if (catalogSection) catalogSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Destaca los últimos productos subidos (usa created_at de Supabase)
+function renderRecienAgregado(products) {
+  const section = document.getElementById('recien-agregado-section');
+  const list = document.getElementById('recien-agregado-list');
+  if (!section || !list) return;
+  const recientes = products
+    .filter(p => p.createdAt && !p.coleccion)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 8);
+  if (recientes.length < 3) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  list.innerHTML = recientes.map(p => `
+    <div class="crosssell-card" style="flex:0 0 140px; cursor:pointer;" onclick='openProductModal(allProducts.find(x=>x.id==="${p.id}"))'>
+      <img src="${p.mainImage || 'assets/favicon-180.png'}" alt="${esc(p.name)}" loading="lazy" style="width:100%;height:100px;object-fit:cover;border-radius:10px;">
+      <p style="font-size:12px;font-weight:800;margin:6px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.name)}</p>
+      <p style="font-size:12px;color:var(--grape);font-weight:700;">${esc(p.price)}</p>
+    </div>
+  `).join('');
+}
+
+// Permite compartir un link directo a un producto: ?producto=<id>
+function applyProductoFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const target = params.get('producto');
+  if (!target) return;
+  const product = allProducts.find(p => p.id === target);
+  if (!product) return;
+  openProductModal(product);
 }
 
 function renderColeccionFilterButtons(colecciones) {
@@ -762,6 +801,25 @@ function openProductModal(product) {
       showStampAnimation(); // 🏷️ Efecto sello (Fase 14)
       addToWishlist(product);
       closeProductModal();
+    };
+  }
+
+  // Vincular botón de compartir (Web Share API con fallback a copiar link)
+  const shareBtn = document.getElementById('pm-share-btn');
+  if (shareBtn) {
+    shareBtn.onclick = async () => {
+      const shareUrl = `${window.location.origin}${window.location.pathname}?producto=${encodeURIComponent(product.id)}`;
+      const shareData = { title: product.name, text: `Mira "${product.name}" en Bicho Capricho`, url: shareUrl };
+      if (navigator.share) {
+        try { await navigator.share(shareData); } catch (e) { /* usuario canceló, ignora */ }
+      } else if (navigator.clipboard) {
+        try {
+          await navigator.clipboard.writeText(shareUrl);
+          const original = shareBtn.textContent;
+          shareBtn.textContent = '✓ Link copiado';
+          setTimeout(() => { shareBtn.textContent = original; }, 2000);
+        } catch (e) { /* silencioso */ }
+      }
     };
   }
 

@@ -474,6 +474,12 @@ footer{background:var(--forest);color:var(--cream);padding:80px 0 25px}.footer-m
   border-bottom-right-radius: 22px;
 }
 .pm-category { font-size: 11px; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; color: var(--olive); }
+.pm-share-btn {
+  background: var(--white); color: var(--forest); border: 2px solid var(--forest);
+  border-radius: 999px; padding: 5px 12px; font: 800 11px 'Nunito'; cursor: pointer;
+  box-shadow: 2px 2px 0 var(--forest); white-space: nowrap; flex-shrink: 0; transition: .15s;
+}
+.pm-share-btn:hover { transform: translateY(-1px); }
 .pm-title { font-size: 38px; line-height: 1.1; margin: 8px 0 16px; font-family: 'Fredoka', sans-serif; }
 .pm-desc { font-size: 16px; line-height: 1.6; color: #445; flex-grow: 1; }
 .pm-guarantee {
