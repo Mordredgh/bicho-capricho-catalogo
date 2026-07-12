@@ -770,21 +770,28 @@ function openProductModal(product) {
   if (product.galleryImages && product.galleryImages.length > 0) {
     modalImages = modalImages.concat(product.galleryImages);
   }
-  
+
   if (modalImages.length === 0) {
     modalImages = ['assets/favicon-180.png'];
   }
-  
+
   currentImageIndex = 0;
+  currentModalProductName = product.name;
+  modalTriggerEl = document.activeElement;
   renderModalCarousel();
   modal.classList.add('open');
+  const closeBtn = document.getElementById('p-modal-close');
+  if (closeBtn) closeBtn.focus();
 }
+
+let currentModalProductName = '';
+let modalTriggerEl = null;
 
 function renderModalCarousel() {
   const carousel = document.getElementById('pm-carousel');
   const dotsContainer = document.getElementById('pm-dots');
-  
-  carousel.innerHTML = modalImages.map(src => `<img src="${src}" class="pm-carousel-img">`).join('');
+
+  carousel.innerHTML = modalImages.map((src, i) => `<img src="${src}" class="pm-carousel-img" alt="${esc(currentModalProductName)}${modalImages.length > 1 ? ` — foto ${i + 1} de ${modalImages.length}` : ''}" ${i === 0 ? '' : 'loading="lazy"'} onload="this.classList.add('loaded')">`).join('');
   
   if (modalImages.length > 1) {
     dotsContainer.innerHTML = modalImages.map((_, i) => `<div class="pm-dot ${i === 0 ? 'active' : ''}"></div>`).join('');
@@ -825,6 +832,7 @@ function closeProductModal() {
   overlay.classList.add('closing');
   setTimeout(() => {
     overlay.classList.remove('open', 'closing');
+    if (modalTriggerEl && typeof modalTriggerEl.focus === 'function') modalTriggerEl.focus();
   }, 380);
 }
 document.getElementById('p-modal-close').addEventListener('click', closeProductModal);
