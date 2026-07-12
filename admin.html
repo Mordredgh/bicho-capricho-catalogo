@@ -967,7 +967,7 @@
           </div>
           <div class="form-group">
             <label>Emoji</label>
-            <input type="text" id="cf-emoji" maxlength="4" placeholder="🎬">
+            <input type="text" id="cf-emoji" placeholder="🎬">
           </div>
           <div class="form-group">
             <label>Visibilidad</label>
@@ -986,6 +986,21 @@
               <input type="file" id="cf-banner" accept="image/png, image/jpeg, image/webp">
               <div class="preview-container" id="cf-banner-preview"></div>
             </div>
+          </div>
+          <div class="form-group full" id="cf-disenos-section" style="border-top:2px dashed var(--forest); padding-top:16px; margin-top:8px; display:none;">
+            <label>🎨 Diseños de esta colección</label>
+            <p style="font-size:11px; color:var(--olive); margin-bottom:8px;">Sube varios PNG transparentes a la vez. Cada diseño genera automáticamente 4 productos (Hombre, Mujer, Juvenil, Niños), cada uno con todos los colores de mockup disponibles para ese corte — sin swatches repetidos.</p>
+            <input type="file" id="cf-disenos" accept="image/png" multiple>
+            <div style="display:flex; gap:18px; align-items:center; margin-top:10px; flex-wrap:wrap;">
+              <label style="font-size:12px;">Tamaño diseño
+                <input type="range" id="cf-diseno-scale" min="30" max="100" value="55" style="vertical-align:middle">
+              </label>
+              <label style="font-size:12px;">Posición vertical
+                <input type="range" id="cf-diseno-offset-y" min="0" max="60" value="22" style="vertical-align:middle">
+              </label>
+              <button type="button" class="btn-primary" style="padding:8px 16px;margin:0;box-shadow:2px 3px 0 var(--forest);" onclick="generateColeccionProductos()">✨ Generar productos (4 por diseño)</button>
+            </div>
+            <div id="coleccion-diseno-progress" style="font-size:12px;color:var(--olive);margin-top:10px;"></div>
           </div>
         </div>
         <div class="form-actions">
@@ -1240,6 +1255,8 @@
     document.getElementById('cf-banner-preview').innerHTML = '';
     document.getElementById('coleccion-modal-title').textContent = id === null ? 'Nueva colección' : 'Editar colección';
     document.getElementById('coleccion-modal-save-btn').textContent = id === null ? 'Guardar colección ✦' : 'Actualizar colección ✦';
+    document.getElementById('cf-disenos-section').style.display = id === null ? 'none' : '';
+    document.getElementById('coleccion-diseno-progress').textContent = '';
 
     if (id !== null) {
       const c = _colecciones.find(x => x.id === id);
@@ -1341,6 +1358,100 @@
     }
   }
   window.saveColeccion = saveColeccion;
+
+  // Genera 4 productos por diseño (Hombre/Mujer/Juvenil/Niños), cada uno con
+  // los swatches de color propios de ese corte — evita puntos de color
+  // duplicados que pasarían si un solo producto mezclara los 4 cortes.
+  async function generateColeccionProductos() {
+    if (editingColeccionId === null) { showToast('⚠️ Guarda la colección primero, luego edítala para subir diseños'); return; }
+    const files = Array.from(document.getElementById('cf-disenos').files);
+    if (!files.length) { showToast('⚠️ Sube al menos un diseño PNG'); return; }
+    if (!_mockups.length) { showToast('⚠️ No hay mockups de playera cargados todavía'); return; }
+
+    const scale = parseInt(document.getElementById('cf-diseno-scale').value, 10) / 100;
+    const offsetY = parseInt(document.getElementById('cf-diseno-offset-y').value, 10) / 100;
+    const progressEl = document.getElementById('coleccion-diseno-progress');
+    const cuts = ['Hombre', 'Mujer', 'Juvenil', 'Niños'];
+    let totalCreados = 0;
+
+    for (const file of files) {
+      let designImg;
+      try {
+        designImg = await loadImageFromFile(file);
+      } catch (e) {
+        showToast(`❌ No se pudo leer ${file.name}`);
+        continue;
+      }
+      const baseName = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim();
+      const displayName = baseName.replace(/\b\w/g, c => c.toUpperCase()) || 'Diseño';
+
+      for (const cut of cuts) {
+        const mockupsDelCorte = _mockups.filter(m => m.nombre.startsWith(cut + ' - '));
+        if (!mockupsDelCorte.length) continue;
+
+        progressEl.textContent = `Generando "${displayName} - ${cut}" (${mockupsDelCorte.length} colores)...`;
+
+        const results = [];
+        for (const mockup of mockupsDelCorte) {
+          try {
+            const mockupImg = await loadImageFromUrl(mockup.foto_url);
+            const canvas = document.createElement('canvas');
+            canvas.width = mockupImg.naturalWidth;
+            canvas.height = mockupImg.naturalHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(mockupImg, 0, 0);
+            const dW = canvas.width * scale;
+            const dH = dW * (designImg.naturalHeight / designImg.naturalWidth);
+            const dX = (canvas.width - dW) / 2;
+            const dY = canvas.height * offsetY;
+            ctx.drawImage(designImg, dX, dY, dW, dH);
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', 0.9));
+            const safeName = mockup.nombre.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+            const path = `productos/${Date.now()}-${safeName}.webp`;
+            const url = await supaUploadAuth(path, blob);
+            results.push({ url, hex: mockup.color_hex });
+          } catch (e) {
+            console.warn(`Fallo mockup ${mockup.nombre}:`, e.message);
+          }
+        }
+
+        if (!results.length) continue;
+
+        const row = {
+          id: crypto.randomUUID(),
+          nombre: `${displayName} - ${cut}`,
+          cat: 'textil',
+          precio: 'Consultar',
+          descripcion: `Diseño ${displayName}, corte ${cut}.`,
+          badge: '',
+          badge_pos: 'top-left',
+          color_representativo: 'lilac',
+          colores: results.map(r => r.hex),
+          foto: results[0].url,
+          galeria: JSON.stringify(results.slice(1).map(r => r.url)),
+          size_guide: 'playera',
+          free_shipping: false,
+          mock_class: 'tshirt',
+          coleccion: editingColeccionId,
+          activo: true
+        };
+
+        try {
+          const { error } = await sbClient.from('catalogo_productos').insert(row);
+          if (error) throw error;
+          totalCreados++;
+        } catch (e) {
+          showToast(`❌ Error guardando "${row.nombre}": ${e.message}`);
+        }
+      }
+    }
+
+    document.getElementById('cf-disenos').value = '';
+    progressEl.textContent = '';
+    showToast(`✅ ${totalCreados} productos creados. Precio queda en "Consultar" — edítalos para poner el precio real.`);
+    await renderTable();
+  }
+  window.generateColeccionProductos = generateColeccionProductos;
 
   async function deleteColeccion(id) {
     try {
