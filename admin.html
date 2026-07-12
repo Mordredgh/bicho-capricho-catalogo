@@ -858,7 +858,14 @@
     <!-- Tabla de productos -->
     <div class="section-heading">
       <h2>Catálogo de productos</h2>
-      <button class="btn-primary" onclick="openModal()">+ Agregar producto</button>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <button class="btn-save-sm" style="background:var(--white);color:var(--forest);" onclick="exportProductsCSV()">⬇ Exportar CSV</button>
+        <button class="btn-primary" onclick="openModal()">+ Agregar producto</button>
+      </div>
+    </div>
+
+    <div style="margin-bottom:14px;">
+      <input type="text" id="admin-search" placeholder="🔍 Buscar producto por nombre..." style="width:100%; max-width:360px; padding:10px 14px; border:2px solid var(--forest); border-radius:10px; font-family:'Nunito',sans-serif; font-weight:700;">
     </div>
 
     <!-- Pestañas de categoría (Fase 14 - QoL) -->
@@ -1867,6 +1874,7 @@
   window.addMockup = addMockup;
 
   let currentAdminFilter = 'todos';
+  let currentAdminSearch = '';
 
   async function renderTable() {
     const tbody = document.getElementById('products-tbody');
@@ -1885,11 +1893,15 @@
 
     let displayList = allList;
     if (currentAdminFilter !== 'todos') {
-      displayList = allList.filter(p => p.category === currentAdminFilter);
+      displayList = displayList.filter(p => p.category === currentAdminFilter);
+    }
+    if (currentAdminSearch.trim()) {
+      const q = currentAdminSearch.trim().toLowerCase();
+      displayList = displayList.filter(p => p.name.toLowerCase().includes(q));
     }
 
     if (!displayList.length) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="7">No hay productos en esta categoría. ¡Agrega uno nuevo! ✦</td></tr>';
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="7">No hay productos que coincidan. ¡Agrega uno nuevo o ajusta la búsqueda! ✦</td></tr>';
       return;
     }
 
@@ -1908,6 +1920,8 @@
         <td>${p.badge ? `<span class="badge-pill">${badgeLabel[p.badge] || p.badge}</span>` : '<span class="badge-none">Sin badge</span>'}</td>
         <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(p.desc)}">${esc(p.desc)}</td>
         <td>
+          <button class="action-btn" title="${p.badge === 'agotado' ? 'Marcar disponible' : 'Marcar agotado'}" data-action="toggle-agotado" data-id="${p.id}">${p.badge === 'agotado' ? '✅' : '🚫'}</button>
+          <button class="action-btn" title="Duplicar" data-action="duplicate" data-id="${p.id}">📄</button>
           <button class="action-btn" title="Editar" data-action="edit" data-id="${p.id}">✏️</button>
           <button class="action-btn" title="Eliminar" data-action="delete" data-id="${p.id}" data-name="${esc(p.name)}">🗑️</button>
         </td>
@@ -1915,11 +1929,62 @@
     `).join('');
   }
 
+  document.getElementById('admin-search').addEventListener('input', (e) => {
+    currentAdminSearch = e.target.value;
+    renderTable();
+  });
+
+  function exportProductsCSV() {
+    const list = getProducts().filter(p => !p.coleccion);
+    if (!list.length) { showToast('⚠️ No hay productos que exportar'); return; }
+    const headers = ['Nombre', 'Categoría', 'Precio', 'Badge', 'Descripción', 'Colección'];
+    const rows = list.map(p => [p.name, p.category, p.price, p.badge || '', p.desc, p.coleccion || '']);
+    const csvEscape = (v) => `"${String(v).replace(/"/g, '""')}"`;
+    const csv = [headers, ...rows].map(row => row.map(csvEscape).join(',')).join('\r\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `catalogo-bicho-capricho-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  window.exportProductsCSV = exportProductsCSV;
+
+  async function toggleAgotado(id) {
+    const p = getProducts().find(x => x.id === id);
+    if (!p) return;
+    const nuevoBadge = p.badge === 'agotado' ? '' : 'agotado';
+    try {
+      await supaAdmin('PATCH', 'catalogo_productos', { badge: nuevoBadge }, `?id=eq.${id}`);
+      showToast(nuevoBadge ? '🚫 Marcado como agotado' : '✅ Marcado como disponible');
+      await renderTable();
+    } catch (e) {
+      showToast(`❌ Error: ${e.message}`);
+    }
+  }
+
+  async function duplicateProduct(id) {
+    const p = getProducts().find(x => x.id === id);
+    if (!p) return;
+    const row = toRow({ ...p, name: `${p.name} (copia)` });
+    row.id = crypto.randomUUID();
+    try {
+      await supaAdmin('POST', 'catalogo_productos', row);
+      showToast('✅ Producto duplicado — edítalo para ajustar lo que cambie');
+      await renderTable();
+    } catch (e) {
+      showToast(`❌ Error: ${e.message}`);
+    }
+  }
+
   document.getElementById('products-tbody').addEventListener('click', (e) => {
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
     if (btn.dataset.action === 'edit') editProduct(btn.dataset.id);
     if (btn.dataset.action === 'delete') askDelete(btn.dataset.id, btn.dataset.name);
+    if (btn.dataset.action === 'toggle-agotado') toggleAgotado(btn.dataset.id);
+    if (btn.dataset.action === 'duplicate') duplicateProduct(btn.dataset.id);
   });
 
   document.getElementById('coleccion-list').addEventListener('click', (e) => {
@@ -2087,15 +2152,31 @@
     }
   }
 
+  let galleryDragIdx = null;
+
   function renderGalleryPreviews() {
     const container = document.getElementById('preview-gallery');
     if (currentGallery && currentGallery.length > 0) {
       container.innerHTML = currentGallery.map((src, idx) => `
-        <div class="admin-preview-wrapper">
+        <div class="admin-preview-wrapper" draggable="true" data-idx="${idx}" style="cursor:grab;">
           <img src="${src}" class="preview-img">
           <button type="button" class="preview-remove" onclick="removeGalleryImage(${idx})">✕</button>
         </div>
       `).join('');
+      container.querySelectorAll('.admin-preview-wrapper').forEach(el => {
+        el.addEventListener('dragstart', () => { galleryDragIdx = parseInt(el.dataset.idx, 10); el.style.opacity = '0.4'; });
+        el.addEventListener('dragend', () => { el.style.opacity = '1'; });
+        el.addEventListener('dragover', (e) => e.preventDefault());
+        el.addEventListener('drop', (e) => {
+          e.preventDefault();
+          const dropIdx = parseInt(el.dataset.idx, 10);
+          if (galleryDragIdx === null || galleryDragIdx === dropIdx) return;
+          const [moved] = currentGallery.splice(galleryDragIdx, 1);
+          currentGallery.splice(dropIdx, 0, moved);
+          galleryDragIdx = null;
+          renderGalleryPreviews();
+        });
+      });
     } else {
       container.innerHTML = '';
     }
