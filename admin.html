@@ -817,66 +817,6 @@
 
     <div id="pending-chips" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:24px;"></div>
 
-    <!-- WhatsApp Config -->
-    <div class="config-box">
-      <h3>📱 Número de WhatsApp</h3>
-      <p>Este número se usa en todos los botones "Pedir" del catálogo. Formato: código de país + número, sin espacios. Ejemplo: <strong>5218001234567</strong></p>
-      <div class="config-row">
-        <div class="form-group">
-          <label>Número</label>
-          <input type="tel" id="wa-input" placeholder="5218001234567">
-        </div>
-        <button class="btn-save-sm" onclick="saveWA()">Guardar</button>
-        <span class="saved-badge" id="wa-saved">✅ Guardado</span>
-      </div>
-    </div>
-
-    <!-- Colecciones -->
-    <div class="config-box">
-      <h3>🎬 Colecciones</h3>
-      <p>Crea la colección una vez (ej. "Mario Movie") y luego elígela en cada producto desde un menú — evita duplicados por escribirla distinto cada vez. Cada colección puede tener su propia descripción y banner.</p>
-      <div style="display:flex; gap:10px; margin-bottom:14px;">
-        <button type="button" class="btn-save-sm" onclick="openColeccionModal()">+ Nueva colección</button>
-        <button type="button" class="btn-save-sm" style="background:var(--white);color:var(--forest);" onclick="generarQR('https://catalogo.manekistore.com.mx/', 'Catálogo completo')">🔲 QR del catálogo</button>
-      </div>
-      <div id="coleccion-list" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
-    </div>
-
-    <!-- Mockups de playeras reusables -->
-    <div class="config-box">
-      <h3>👕 Mockups de playeras (reusables)</h3>
-      <p>Sube tu foto de playera lisa una vez por color. Las reusas en cualquier producto/colección sin volver a subirlas.</p>
-      <div class="config-row" style="flex-wrap:wrap; gap:14px; align-items:flex-end;">
-        <div class="form-group">
-          <label>Foto (playera lisa, sin diseño)</label>
-          <input type="file" id="mockup-file" accept="image/png, image/jpeg, image/webp">
-        </div>
-        <div class="form-group">
-          <label>Nombre</label>
-          <input type="text" id="mockup-nombre" placeholder="Ej: Blanco" style="width:140px">
-        </div>
-        <div class="form-group">
-          <label>Color</label>
-          <input type="color" id="mockup-hex" value="#ffffff" style="width:44px;height:38px;border:2px solid var(--forest);border-radius:8px;padding:2px;cursor:pointer;">
-        </div>
-        <button type="button" class="btn-save-sm" onclick="addMockup()">+ Agregar mockup</button>
-      </div>
-      <details style="margin-top:14px;">
-        <summary style="cursor:pointer; font-weight:700; color:var(--forest); font-size:13px;">Ver mockups ya cargados (<span id="mockup-count">0</span>)</summary>
-        <div id="mockup-list" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;"></div>
-      </details>
-    </div>
-
-    <!-- Gestor de diseños: subida tipo Redbubble, editor individual por diseño -->
-    <div class="config-box">
-      <h3>🎨 Diseños de playera</h3>
-      <p>Sube uno o varios PNG transparentes. Cada diseño trae su propio editor visual (arrastra para mover, arrastra la esquina para escalar), su propio set de colores/mockups y su propia colección. Genera hasta 4 productos por diseño (Hombre/Mujer/Juvenil/Niños).</p>
-      <div class="file-input-wrapper">
-        <input type="file" id="design-upload-input" accept="image/png" multiple>
-      </div>
-      <div id="design-manager-list" style="margin-top:18px; display:flex; flex-direction:column; gap:20px;"></div>
-    </div>
-
     <!-- Tabla de productos -->
     <div class="section-heading">
       <h2>Catálogo de productos</h2>
@@ -923,10 +863,70 @@
     </div>
 
     <!-- Exportar -->
-    <div style="display:flex;gap:14px;flex-wrap:wrap">
+    <div style="display:flex;gap:14px;flex-wrap:wrap; margin-bottom:32px;">
       <button class="btn-primary" style="background:var(--olive)" onclick="exportJSON()">⬇ Exportar JSON</button>
       <button class="btn-primary" style="background:var(--butter);color:var(--forest)" onclick="document.getElementById('import-input').click()">⬆ Importar JSON</button>
       <input type="file" id="import-input" accept=".json" style="display:none" onchange="importJSON(event)">
+    </div>
+
+    <!-- Gestor de diseños: subida tipo Redbubble, editor individual por diseño -->
+    <div class="config-box">
+      <h3>🎨 Diseños de playera</h3>
+      <p>Sube uno o varios PNG transparentes. Cada diseño trae su propio editor visual (arrastra para mover, arrastra la esquina para escalar), su propio set de colores/mockups y su propia colección. Genera hasta 4 productos por diseño (Hombre/Mujer/Juvenil/Niños).</p>
+      <div class="file-input-wrapper">
+        <input type="file" id="design-upload-input" accept="image/png" multiple>
+      </div>
+      <div id="design-manager-list" style="margin-top:18px; display:flex; flex-direction:column; gap:20px;"></div>
+    </div>
+
+    <!-- Colecciones -->
+    <div class="config-box">
+      <h3>🎬 Colecciones</h3>
+      <p>Crea la colección una vez (ej. "Mario Movie") y luego elígela en cada producto desde un menú — evita duplicados por escribirla distinto cada vez. Cada colección puede tener su propia descripción y banner.</p>
+      <div style="display:flex; gap:10px; margin-bottom:14px;">
+        <button type="button" class="btn-save-sm" onclick="openColeccionModal()">+ Nueva colección</button>
+        <button type="button" class="btn-save-sm" style="background:var(--white);color:var(--forest);" onclick="generarQR('https://catalogo.manekistore.com.mx/', 'Catálogo completo')">🔲 QR del catálogo</button>
+      </div>
+      <div id="coleccion-list" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
+    </div>
+
+    <!-- Mockups de playeras reusables -->
+    <div class="config-box">
+      <h3>👕 Mockups de playeras (reusables)</h3>
+      <p>Sube tu foto de playera lisa una vez por color. Las reusas en cualquier producto/colección sin volver a subirlas.</p>
+      <div class="config-row" style="flex-wrap:wrap; gap:14px; align-items:flex-end;">
+        <div class="form-group">
+          <label>Foto (playera lisa, sin diseño)</label>
+          <input type="file" id="mockup-file" accept="image/png, image/jpeg, image/webp">
+        </div>
+        <div class="form-group">
+          <label>Nombre</label>
+          <input type="text" id="mockup-nombre" placeholder="Ej: Blanco" style="width:140px">
+        </div>
+        <div class="form-group">
+          <label>Color</label>
+          <input type="color" id="mockup-hex" value="#ffffff" style="width:44px;height:38px;border:2px solid var(--forest);border-radius:8px;padding:2px;cursor:pointer;">
+        </div>
+        <button type="button" class="btn-save-sm" onclick="addMockup()">+ Agregar mockup</button>
+      </div>
+      <details style="margin-top:14px;">
+        <summary style="cursor:pointer; font-weight:700; color:var(--forest); font-size:13px;">Ver mockups ya cargados (<span id="mockup-count">0</span>)</summary>
+        <div id="mockup-list" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;"></div>
+      </details>
+    </div>
+
+    <!-- WhatsApp Config -->
+    <div class="config-box">
+      <h3>📱 Número de WhatsApp</h3>
+      <p>Este número se usa en todos los botones "Pedir" del catálogo. Formato: código de país + número, sin espacios. Ejemplo: <strong>5218001234567</strong></p>
+      <div class="config-row">
+        <div class="form-group">
+          <label>Número</label>
+          <input type="tel" id="wa-input" placeholder="5218001234567">
+        </div>
+        <button class="btn-save-sm" onclick="saveWA()">Guardar</button>
+        <span class="saved-badge" id="wa-saved">✅ Guardado</span>
+      </div>
     </div>
 
   </div>
