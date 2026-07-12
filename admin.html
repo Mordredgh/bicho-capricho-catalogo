@@ -587,72 +587,83 @@
     /* ── Gestor de diseños ── */
     .design-card {
       background: var(--cream);
-      border: 2px solid var(--forest);
       border-radius: 20px;
+      border-left: 6px solid var(--grape);
+      box-shadow: 8px 10px 0 rgba(28,79,50,.1);
       overflow: hidden;
-      box-shadow: var(--shadow);
+      position: relative;
     }
     .design-card-header {
-      background: var(--lavender);
-      padding: 14px 22px;
-      display: flex; align-items: center; justify-content: space-between;
-      border-bottom: 2px solid var(--forest);
+      padding: 20px 26px 6px;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
     }
-    .design-card-header h4 { font-family: 'Fredoka', sans-serif; font-size: 18px; color: var(--forest); margin: 0; }
+    .design-card-header h4 { font-family: 'Fredoka', sans-serif; font-size: 21px; font-weight: 600; color: var(--forest); margin: 0; }
     .design-remove-btn {
-      background: var(--white); border: 2px solid var(--forest); border-radius: 999px;
-      padding: 5px 14px; font: 800 12px 'Nunito'; color: #e56789; cursor: pointer;
-      box-shadow: 2px 2px 0 var(--forest); transition: .15s;
+      background: var(--butter); color: var(--forest); border: none; border-radius: 50%;
+      width: 32px; height: 32px; flex-shrink: 0; display: grid; place-items: center;
+      font-weight: 900; font-size: 13px; cursor: pointer;
+      box-shadow: 2px 3px 0 rgba(28,79,50,.25); transition: .15s;
     }
-    .design-remove-btn:hover { transform: translateY(-1px); background: #ffe4ea; }
-    .design-card-body { display: flex; gap: 26px; flex-wrap: wrap; padding: 22px; }
+    .design-remove-btn:hover { transform: scale(1.08) rotate(8deg); }
+    .design-card-body { display: flex; gap: 30px; flex-wrap: wrap; padding: 10px 26px 26px; }
     .design-editor-col { flex: 0 0 240px; }
-    .design-editor-hint { font-size: 12px; color: var(--olive); margin-bottom: 8px; font-weight: 700; }
+    .design-editor-hint { font-size: 12px; color: var(--olive); margin-bottom: 10px; font-weight: 700; line-height: 1.4; }
     .design-mockup-select {
-      width: 100%; margin-bottom: 10px; padding: 8px 10px; border: 2px solid var(--forest);
+      width: 100%; margin-bottom: 12px; padding: 9px 12px; border: 1.5px solid rgba(28,79,50,.2);
       border-radius: 10px; font: 700 12px 'Nunito'; background: var(--white); cursor: pointer;
+      box-shadow: 0 2px 5px rgba(28,79,50,.06);
     }
     .design-canvas-frame {
-      border: 2px dashed var(--olive); border-radius: 16px; padding: 8px; background: var(--white);
-      width: fit-content;
+      background: var(--white); border-radius: 14px; padding: 10px; width: fit-content;
+      box-shadow: 0 6px 18px rgba(28,79,50,.16); transform: rotate(-1.2deg);
     }
-    .design-canvas-frame canvas { display: block; cursor: move; touch-action: none; border-radius: 10px; }
-    .design-readout { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .design-canvas-frame canvas { display: block; cursor: move; touch-action: none; border-radius: 8px; }
+    .design-readout { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
     .design-readout span {
-      background: var(--butter); color: var(--forest); font: 800 11px 'Nunito';
-      padding: 4px 10px; border-radius: 999px; border: 1px solid var(--forest);
+      background: rgba(195,236,159,.55); color: var(--forest); font: 800 11px 'Nunito';
+      padding: 4px 11px; border-radius: 999px;
     }
     .design-config-col { flex: 1; min-width: 260px; }
     .design-field-label {
-      font: 800 11px 'Nunito'; text-transform: uppercase; letter-spacing: .5px;
-      color: var(--forest); display: block; margin-bottom: 6px;
+      font: 800 10px 'Nunito'; text-transform: uppercase; letter-spacing: .6px;
+      color: var(--olive); display: block; margin-bottom: 7px;
     }
     .design-coleccion-select {
-      width: 100%; margin-bottom: 16px; padding: 9px 12px; border: 2px solid var(--forest);
+      width: 100%; margin-bottom: 20px; padding: 10px 12px; border: 1.5px solid rgba(28,79,50,.2);
       border-radius: 10px; font: 700 13px 'Nunito'; background: var(--white); cursor: pointer;
+      box-shadow: 0 2px 5px rgba(28,79,50,.06);
     }
     .design-mockup-panel {
-      border: 2px solid var(--lime); background: #f5fbef; border-radius: 14px;
-      padding: 12px; max-height: 190px; overflow-y: auto;
+      background: var(--white); border-radius: 14px; padding: 16px;
+      max-height: 220px; overflow-y: auto; box-shadow: inset 0 0 0 1.5px rgba(28,79,50,.08);
     }
-    .design-cut-group { margin-bottom: 10px; }
+    .design-cut-group { margin-bottom: 16px; }
     .design-cut-group:last-child { margin-bottom: 0; }
     .design-cut-title {
-      font: 800 11px 'Fredoka', sans-serif; color: var(--forest); text-transform: uppercase;
-      letter-spacing: .5px; margin-bottom: 6px; display: block;
+      font: 800 10px 'Nunito'; color: var(--white); background: var(--forest);
+      text-transform: uppercase; letter-spacing: .6px; display: inline-block;
+      padding: 3px 11px; border-radius: 999px; margin-bottom: 10px;
     }
-    .design-chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .design-chip-row { display: flex; flex-wrap: wrap; gap: 12px; }
     .design-color-chip {
-      display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px 5px 8px;
-      background: var(--white); border: 2px solid var(--forest); border-radius: 999px;
-      font: 700 11px 'Nunito'; cursor: pointer; opacity: .45; transition: .15s;
+      display: flex; flex-direction: column; align-items: center; gap: 5px;
+      width: 46px; cursor: pointer; opacity: .35; transition: .15s;
     }
-    .design-color-chip:hover { opacity: .75; }
-    .design-color-chip.active { opacity: 1; background: var(--lime); box-shadow: 2px 2px 0 var(--forest); }
+    .design-color-chip:hover { opacity: .7; }
+    .design-color-chip.active { opacity: 1; }
     .design-color-chip input { display: none; }
-    .design-color-dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,.2); }
-    .design-generate-btn { margin-top: 16px; }
-    .design-progress { font-size: 12px; color: var(--olive); padding: 0 22px 18px; }
+    .design-color-dot {
+      width: 30px; height: 30px; border-radius: 50%; position: relative; display: block;
+      border: 2px solid var(--white); box-shadow: 0 0 0 1.5px rgba(28,79,50,.25);
+    }
+    .design-color-chip.active .design-color-dot { box-shadow: 0 0 0 2px var(--forest); }
+    .design-color-chip.active .design-color-dot::after {
+      content: '✓'; position: absolute; inset: 0; display: grid; place-items: center;
+      color: #fff; font-size: 13px; font-weight: 900; text-shadow: 0 1px 2px rgba(0,0,0,.5);
+    }
+    .design-chip-label { font-size: 9px; font-weight: 700; color: var(--forest); text-align: center; line-height: 1.15; }
+    .design-generate-btn { margin-top: 18px; }
+    .design-progress { font-size: 12px; color: var(--olive); padding: 0 26px 22px; }
 
     /* ── SCRAPBOOK BOUTIQUE UPGRADES ── */
     
@@ -1633,7 +1644,7 @@
       <div class="design-card">
         <div class="design-card-header">
           <h4>🎨 ${esc(d.name)}</h4>
-          <span class="design-remove-btn" onclick="removePendingDesign('${d.localId}')" title="Quitar">✕ Quitar</span>
+          <button type="button" class="design-remove-btn" onclick="removePendingDesign('${d.localId}')" title="Quitar diseño">✕</button>
         </div>
         <div class="design-card-body">
           <div class="design-editor-col">
@@ -1662,10 +1673,10 @@
                   <span class="design-cut-title">${cut}</span>
                   <div class="design-chip-row">
                     ${grupos[cut].map(m => `
-                      <label class="design-color-chip ${d.selectedMockupIds.has(m.id) ? 'active' : ''}">
+                      <label class="design-color-chip ${d.selectedMockupIds.has(m.id) ? 'active' : ''}" title="${esc(m.nombre.replace(cut + ' - ', ''))}">
                         <input type="checkbox" ${d.selectedMockupIds.has(m.id) ? 'checked' : ''} onchange="toggleDesignMockup('${d.localId}', '${m.id}', this.checked); this.closest('.design-color-chip').classList.toggle('active', this.checked);">
                         <span class="design-color-dot" style="background:${m.color_hex}"></span>
-                        ${esc(m.nombre.replace(cut + ' - ', ''))}
+                        <span class="design-chip-label">${esc(m.nombre.replace(cut + ' - ', ''))}</span>
                       </label>
                     `).join('') || '<span style="font-size:11px;color:var(--olive)">Sin mockups para este corte</span>'}
                   </div>
