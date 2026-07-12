@@ -157,6 +157,30 @@ const badgeLabel = {
 };
 const catLabel = { vasos:'Vasos y tazas', textil:'Textil', detalles:'Detalles', personalizados:'Personalizados' };
 
+// Estampado en playeras — mismos valores confirmados contra Bicho Capricho Web
+// (src/pages/Configurador.tsx). Solo aplica cuando el producto tiene
+// Guía de Medidas = "Playera" (no sudadera, no otros textiles).
+const ESTAMPADOS = [
+  { id: 'frontal',          label: 'Frontal',           zona: 'Pecho completo (frente)' },
+  { id: 'espalda',          label: 'Espalda',           zona: 'Espalda completa' },
+  { id: 'bolsillo',         label: 'Bolsillo',          zona: 'Pecho izquierdo' },
+  { id: 'doble',            label: 'Doble',             zona: 'Frontal + Espalda' },
+  { id: 'bolsillo-espalda', label: 'Bolsillo + Espalda', zona: 'Izq. + Espalda' }
+];
+const TAMANOS_ESTAMPADO = [
+  { id: 'chico',  label: 'Chico',  dim: '28×20 cm' },
+  { id: 'grande', label: 'Grande', dim: '42×32 cm' }
+];
+function requiereTamanoEstampado(estampadoId) {
+  return estampadoId !== 'bolsillo' && estampadoId !== 'bolsillo-espalda';
+}
+function precioEstampado(estampadoId, tamanoId) {
+  if (estampadoId === 'bolsillo') return 180;
+  if (estampadoId === 'bolsillo-espalda') return 250;
+  if (estampadoId === 'doble') return 250;
+  return tamanoId === 'grande' ? 200 : 180;
+}
+
 function createCardHTML(p, index) {
   const tilt = index % 3 === 0 ? 'tilt-left' : index % 2 === 0 ? 'tilt-right' : '';
   const doodle = index % 2 !== 0 ? 'doodle-accent' : '';
@@ -521,14 +545,23 @@ function openProductModal(product) {
   
   document.getElementById('pm-title').textContent = product.name;
   const pmCatText = catLabel[product.category] || product.category;
-  document.getElementById('pm-category').textContent = product.coleccion
-    ? `${pmCatText} · Colección: ${product.coleccion}`
+  const coleccionNombre = product.coleccion
+    ? ((_coleccionesData.find(c => c.id === product.coleccion) || {}).nombre || product.coleccion)
+    : '';
+  document.getElementById('pm-category').textContent = coleccionNombre
+    ? `${pmCatText} · Colección: ${coleccionNombre}`
     : pmCatText;
   document.getElementById('pm-desc').textContent = product.desc;
   document.getElementById('pm-price').textContent = product.price;
 
   const msg = encodeURIComponent(`Hola, me encantó ${product.name}. ¿Me compartes más información?`);
   document.getElementById('pm-wa-btn').href = `https://wa.me/${WA_NUMBER}?text=${msg}`;
+
+  // Fallback: textil sin guia asignada se asume playera (misma regla que abajo)
+  let productGuide = product.sizeGuide;
+  if (!productGuide || productGuide === 'none') {
+    productGuide = product.category === 'textil' ? 'playera' : 'none';
+  }
 
   // Recomendaciones de Cuidado dinámicas
   const careContainer = document.getElementById('pm-care-instructions');
@@ -568,15 +601,7 @@ function openProductModal(product) {
   // Guía de Medidas dinámica (Fase 14 - Presets del Admin)
   const sgContainer = document.getElementById('pm-size-guide-container');
   if (sgContainer) {
-    // Determinar qué guía mostrar (fallback a 'playera' si el producto es textil y no tiene guía asignada)
-    let guide = product.sizeGuide;
-    if (!guide || guide === 'none') {
-      if (product.category === 'textil') {
-        guide = 'playera';
-      } else {
-        guide = 'none';
-      }
-    }
+    const guide = productGuide;
 
     if (guide !== 'none') {
       let guideHTML = '';
@@ -697,6 +722,76 @@ function openProductModal(product) {
       }
     } else {
       sgContainer.innerHTML = '';
+    }
+  }
+
+  // Selector de estampado (posición + tamaño) — solo playeras (Fase 15)
+  const estContainer = document.getElementById('pm-estampado-container');
+  if (estContainer) {
+    if (productGuide === 'playera') {
+      const estado = { estampado: 'frontal', tamano: 'chico' };
+
+      const actualizarWaMsg = () => {
+        const est = ESTAMPADOS.find(e => e.id === estado.estampado);
+        const necesitaTam = requiereTamanoEstampado(estado.estampado);
+        const tamTxt = necesitaTam
+          ? (estado.tamano === 'grande' ? ' - Grande (42×32cm)' : ' - Chico (28×20cm)')
+          : '';
+        const precio = precioEstampado(estado.estampado, estado.tamano);
+        const waBtn = document.getElementById('pm-wa-btn');
+        if (waBtn) {
+          const texto = encodeURIComponent(`Hola, me encantó ${product.name}. Quiero estampado ${est.label}${tamTxt} (aprox. $${precio} MXN). ¿Me compartes más información?`);
+          waBtn.href = `https://wa.me/${WA_NUMBER}?text=${texto}`;
+        }
+      };
+
+      const renderEstampado = () => {
+        const necesitaTam = requiereTamanoEstampado(estado.estampado);
+        const precio = precioEstampado(estado.estampado, estado.tamano);
+        estContainer.innerHTML = `
+          <div class="size-guide-accordion" style="margin-bottom:16px;">
+            <div style="padding:16px;">
+              <strong style="display:block;margin-bottom:10px;">🎨 ¿Dónde va el estampado?</strong>
+              <div class="pm-est-options" style="display:flex;flex-wrap:wrap;gap:8px;${necesitaTam ? 'margin-bottom:14px;' : ''}">
+                ${ESTAMPADOS.map(e => `
+                  <button type="button" class="pm-est-btn${estado.estampado === e.id ? ' active' : ''}" data-est="${e.id}">
+                    ${esc(e.label)}<br><small>${esc(e.zona)}</small>
+                  </button>
+                `).join('')}
+              </div>
+              ${necesitaTam ? `
+                <strong style="display:block;margin-bottom:8px;font-size:13px;">Tamaño de estampado</strong>
+                <div class="pm-tam-options" style="display:flex;gap:8px;">
+                  ${TAMANOS_ESTAMPADO.map(t => `
+                    <button type="button" class="pm-tam-btn${estado.tamano === t.id ? ' active' : ''}" data-tam="${t.id}">
+                      ${esc(t.label)}<br><small>${esc(t.dim)}</small>
+                    </button>
+                  `).join('')}
+                </div>
+              ` : ''}
+              <p style="margin-top:12px;font-weight:800;color:var(--grape);">Estampado: $${precio} MXN</p>
+            </div>
+          </div>
+        `;
+        estContainer.querySelectorAll('.pm-est-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            estado.estampado = btn.dataset.est;
+            if (!requiereTamanoEstampado(estado.estampado)) estado.tamano = 'chico';
+            renderEstampado();
+          });
+        });
+        estContainer.querySelectorAll('.pm-tam-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            estado.tamano = btn.dataset.tam;
+            renderEstampado();
+          });
+        });
+        actualizarWaMsg();
+      };
+
+      renderEstampado();
+    } else {
+      estContainer.innerHTML = '';
     }
   }
 

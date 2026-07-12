@@ -2,26 +2,22 @@
 
 ## Bloqueantes reales (pre-lanzamiento)
 
-- [ ] Links de redes sociales del footer (`href="#"` en `index.html`) —
-      requieren URLs reales de cliente/negocio. No inventar, preguntar a
-      Gerardo si no las tiene a mano.
-- [ ] Confirmar número real de WhatsApp cargado en Admin (reemplaza el
-      placeholder `521234567890`) antes de publicar en dominio final.
-- [x] Contraseña default del panel admin eliminada por completo — login ahora
-      es Supabase Auth (magic link) restringido a
-      `ellegadodelosantiguos@gmail.com`, no hay password que rotar.
-- [ ] Actualizar `og:url` en `index.html` (actualmente
-      `https://bichocapricho.mx` placeholder) al dominio real cuando se
-      defina (ver Obsidian `PRIORIDAD 1 - CIERRE BICHO CAPRICHO` — dominio
-      final `bichocapricho.com.mx` pendiente de compra).
-- [ ] Deploy temporal en `catalogo.manekistore.com.mx`: falta `git init` +
-      repo GitHub (Coolify lo requiere), registro DNS en Hostinger, y crear
-      app en Coolify con puerto fijo `127.0.0.1:8084:80` (siguiente libre
-      tras POS 8081/Web 8082/CRM 8083). `Dockerfile`/`nginx.conf` ya listos.
-- [ ] Agregar Redirect URLs en Supabase Dashboard → Authentication → URL
-      Configuration: `http://localhost:8080/**` y
-      `https://catalogo.manekistore.com.mx/**` — si no, el magic link de
-      login no vuelve a `admin.html`. No hay tool MCP para esto, es manual.
+- [ ] Links de redes sociales del footer siguen `href="#"` (Instagram,
+      Facebook, WhatsApp del footer) — confirmado en vivo 2026-07-12.
+      Gerardo dijo que los llena él, no insistir más.
+- [ ] WhatsApp sigue en placeholder `521234567890` — confirmado en vivo
+      (botón flotante y "Cotizar por WhatsApp"). Gerardo lo hace él.
+- [x] Contraseña default del panel admin eliminada — login Supabase Auth
+      (magic link), `ellegadodelosantiguos@gmail.com`.
+- [x] `og:url`/canonical corregidos a `catalogo.manekistore.com.mx` — YA EN
+      VIVO, verificado 2026-07-12.
+- [x] **Deploy CERRADO** — `catalogo.manekistore.com.mx` vivo, HTTPS válido,
+      Coolify app `bicho-capricho-catalogo` corriendo, puerto real usado
+      `127.0.0.1:8085:80` (8084 estaba ocupado por otra app).
+- [x] Redirect URLs en Supabase Auth agregadas 2026-07-12 vía navegador
+      (sesión de Gerardo): `https://catalogo.manekistore.com.mx/**` y
+      `http://localhost:8080/**`. Confirmado guardado ("Total URLs: 2").
+      Magic link de admin ya funciona completo.
 
 ## Integración Supabase — CERRADO (2026-07-11)
 
@@ -57,6 +53,42 @@
       revertir ni de verificar visualmente es demasiado riesgoso para hacer
       a ciegas). Hacerlo como tarea aparte si se quiere, con revisión visual
       del propio Gerardo paso a paso.
+
+## SEO/Perf ronda 2 — CERRADO (2026-07-12)
+
+- [x] Preconnect a Supabase (`hoqcrljgmamaumtdrtzi.supabase.co`) en
+      `index.html` — verificado presente en el HTML servido.
+- [x] Soft-404 corregido: el sitio no tiene rutas de cliente (solo
+      `#anchors`), se quitó el fallback SPA de `nginx.conf`. URLs
+      inexistentes devuelven `404` real, verificado con curl.
+- [x] Headers de seguridad: `X-Content-Type-Options`, `X-Frame-Options`,
+      `Referrer-Policy` — verificados presentes en respuesta real.
+
+## Colecciones + mockups + estampado — CERRADO (2026-07-12)
+
+- [x] Colecciones como entidad real (`catalogo_colecciones`) con
+      slugify+upsert anti-duplicado, filtro público, banner, deep link,
+      toggle activa/inactiva, modal propio separado del de producto.
+- [x] Librería de mockups de playera reusable (33 fotos WebP, assets
+      estáticos en `assets/mockups/`, no Supabase Storage).
+- [x] Flujo bulk: subir diseño PNG por colección → genera 4 productos
+      (uno por corte: Hombre/Mujer/Juvenil/Niños) con swatches por color,
+      evita duplicado visual de swatch.
+- [x] Selector de estampado (posición + tamaño) en el modal de producto,
+      solo cuando `sizeGuide === 'playera'`. Precios y zona replicados de
+      `bicho-capricho-web/Configurador.tsx`. Sin rectángulo overlay (diseño
+      ya viene compuesto en la foto). Precio y mensaje de WhatsApp se
+      actualizan en vivo con la selección.
+
+## SEO/Perf — CERRADO (2026-07-11)
+
+- [x] Gzip end-to-end (nginx contenedor + fix nginx host: `proxy_http_version
+      1.1` + `proxy_set_header Accept-Encoding "gzip"` DENTRO del `location`).
+- [x] `robots.txt` + `sitemap.xml` — verificados 200 en vivo.
+- [x] JSON-LD `Product` dinámico — solo se activa con productos reales de
+      Supabase (0 hoy, correcto que no inyecte nada todavía).
+- [x] Overflow horizontal (`.side-sticker.sticker-right-1`) — verificado en
+      vivo 2026-07-12, `canScrollRight: 0`.
 
 ## Optional / Future
 
