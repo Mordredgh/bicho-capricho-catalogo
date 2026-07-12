@@ -161,23 +161,17 @@ const catLabel = { vasos:'Vasos y tazas', textil:'Textil', detalles:'Detalles', 
 // (src/pages/Configurador.tsx). Solo aplica cuando el producto tiene
 // Guía de Medidas = "Playera" (no sudadera, no otros textiles).
 const ESTAMPADOS = [
-  { id: 'frontal',          label: 'Frontal',           zona: 'Pecho completo (frente)' },
-  { id: 'espalda',          label: 'Espalda',           zona: 'Espalda completa' },
-  { id: 'bolsillo',         label: 'Bolsillo',          zona: 'Pecho izquierdo' },
-  { id: 'doble',            label: 'Doble',             zona: 'Frontal + Espalda' },
-  { id: 'bolsillo-espalda', label: 'Bolsillo + Espalda', zona: 'Izq. + Espalda' }
+  { id: 'frontal', label: 'Frontal', zona: 'Pecho completo (frente)' },
+  { id: 'espalda', label: 'Espalda', zona: 'Espalda completa' }
 ];
 const TAMANOS_ESTAMPADO = [
   { id: 'chico',  label: 'Chico',  dim: '28×20 cm' },
   { id: 'grande', label: 'Grande', dim: '42×32 cm' }
 ];
 function requiereTamanoEstampado(estampadoId) {
-  return estampadoId !== 'bolsillo' && estampadoId !== 'bolsillo-espalda';
+  return true;
 }
 function precioEstampado(estampadoId, tamanoId) {
-  if (estampadoId === 'bolsillo') return 180;
-  if (estampadoId === 'bolsillo-espalda') return 250;
-  if (estampadoId === 'doble') return 250;
   return tamanoId === 'grande' ? 200 : 180;
 }
 
