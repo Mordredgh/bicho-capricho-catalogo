@@ -115,7 +115,8 @@ async function loadProducts() {
         sizeGuide:    p.size_guide || 'none',
         freeShipping: p.free_shipping || false,
         mockClass:    p.mock_class || 'tote',
-        coleccion:    p.coleccion || ''
+        coleccion:    p.coleccion || '',
+        precioEstampadoDesde: parseFloat(p.precio_estampado_desde) || 0
       }));
 
       // Solo mostrar colecciones que de verdad tienen al menos un producto activo
@@ -739,7 +740,7 @@ function openProductModal(product) {
                 </div>
               `).join('')}
             </div>
-            <p style="font-weight:800;color:var(--grape);">Estampado desde $180 MXN</p>
+            <p style="font-weight:800;color:var(--grape);">Estampado desde $${product.precioEstampadoDesde || 180} MXN</p>
           </div>
         </div>
       `;

@@ -959,6 +959,10 @@
               <input type="number" id="f-price-max" min="0" step="1" placeholder="Ej: 350" style="width:100%">
             </div>
           </div>
+          <div class="form-group">
+            <label>Estampado desde ($) <small style="font-weight:400;color:#678d47">(playeras, opcional — 180 si se deja vacío)</small></label>
+            <input type="number" id="f-precio-estampado" min="0" step="1" placeholder="Ej: 180">
+          </div>
           <!-- Recordatorio Textil -->
           <div id="textil-reminder" class="admin-alert-box" style="display:none; grid-column: 1 / -1;">
             📏 Recuerda: Los productos textiles mostrarán la guía de medidas estándar en el catálogo.
@@ -1243,6 +1247,7 @@
       free_shipping:        p.freeShipping || false,
       mock_class:           p.mockClass || 'tote',
       coleccion:            p.coleccion || '',
+      precio_estampado_desde: p.precioEstampadoDesde != null ? p.precioEstampadoDesde : null,
       activo:               true
     };
   }
@@ -1266,7 +1271,8 @@
       sizeGuide:    r.size_guide || 'none',
       freeShipping: r.free_shipping || false,
       mockClass:    r.mock_class || 'tote',
-      coleccion:    r.coleccion || ''
+      coleccion:    r.coleccion || '',
+      precioEstampadoDesde: r.precio_estampado_desde
     };
   }
 
@@ -2124,6 +2130,7 @@
         document.getElementById('f-price-max').value  = p.priceMax != null ? p.priceMax : '';
         document.getElementById('f-desc').value       = p.desc;
         document.getElementById('f-size-guide').value = p.sizeGuide || 'none';
+        document.getElementById('f-precio-estampado').value = p.precioEstampadoDesde != null ? p.precioEstampadoDesde : '';
         document.getElementById('f-badge').value      = p.badge || '';
         document.getElementById('f-badge-pos').value  = p.badgePos || 'top-left';
         document.getElementById('f-color').value      = p.color || 'lilac';
@@ -2141,6 +2148,7 @@
       currentMainImage = '';
       currentGallery = [];
       document.getElementById('f-size-guide').value = 'none';
+      document.getElementById('f-precio-estampado').value = '';
       document.getElementById('f-coleccion').value = '';
       renderSwatches();
       renderMainPreview();
@@ -2188,6 +2196,7 @@
     const badgePos  = document.getElementById('f-badge-pos').value;
     const color     = document.getElementById('f-color').value;
     const coleccion = document.getElementById('f-coleccion').value.trim();
+    const precioEstampadoDesde = parseFloat(document.getElementById('f-precio-estampado').value) || null;
 
     if (!name || !category || !price || !desc) {
       showToast('⚠️ Completa todos los campos obligatorios');
@@ -2196,7 +2205,7 @@
     if (!badge && !badgeWarningConfirmed) { openBadgeConfirm(); return; }
     badgeWarningConfirmed = false;
 
-    const product = { name, category, price, priceMin, priceMax, sizeGuide, desc, badge, badgePos, color, coleccion,
+    const product = { name, category, price, priceMin, priceMax, sizeGuide, desc, badge, badgePos, color, coleccion, precioEstampadoDesde,
                       colors: selectedColors, mainImage: currentMainImage, galleryImages: currentGallery };
     const row = toRow(product);
 
