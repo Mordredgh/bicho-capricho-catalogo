@@ -413,16 +413,17 @@ footer{background:var(--forest);color:var(--cream);padding:80px 0 25px}.footer-m
 .p-modal-close:hover { transform: scale(1.1); }
 .p-modal-grid {
   display: grid; grid-template-columns: 1fr 1fr;
+  align-items: start;
 }
 
 /* Modal Gallery */
 .p-modal-gallery {
   background: var(--pink);
-  position: relative;
+  position: sticky; top: 0;
   overflow: hidden;
   border-right: 2px solid var(--forest);
   display: flex; align-items: center; justify-content: center;
-  min-height: 400px;
+  min-height: 400px; max-height: 520px;
   border-top-left-radius: 22px;
   border-bottom-left-radius: 22px;
 }
@@ -491,7 +492,8 @@ footer{background:var(--forest);color:var(--cream);padding:80px 0 25px}.footer-m
 @media(max-width:800px){
   .p-modal-grid { grid-template-columns: 1fr; }
   .p-modal-gallery {
-    min-height: 250px; border-right: none; border-bottom: 2px solid var(--forest);
+    position: static; min-height: 250px; max-height: 340px;
+    border-right: none; border-bottom: 2px solid var(--forest);
     border-top-left-radius: 22px; border-top-right-radius: 22px; border-bottom-left-radius: 0;
   }
   .p-modal-info {
