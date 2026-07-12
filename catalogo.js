@@ -113,7 +113,8 @@ async function loadProducts() {
         galleryImages: (() => { try { return JSON.parse(p.galeria || '[]'); } catch { return []; } })(),
         sizeGuide:    p.size_guide || 'none',
         freeShipping: p.free_shipping || false,
-        mockClass:    p.mock_class || 'tote'
+        mockClass:    p.mock_class || 'tote',
+        coleccion:    p.coleccion || ''
       }));
 
       filteredProducts = [...allProducts];
@@ -431,7 +432,10 @@ function openProductModal(product) {
   const modal = document.getElementById('p-modal-overlay');
   
   document.getElementById('pm-title').textContent = product.name;
-  document.getElementById('pm-category').textContent = catLabel[product.category] || product.category;
+  const pmCatText = catLabel[product.category] || product.category;
+  document.getElementById('pm-category').textContent = product.coleccion
+    ? `${pmCatText} · Colección: ${product.coleccion}`
+    : pmCatText;
   document.getElementById('pm-desc').textContent = product.desc;
   document.getElementById('pm-price').textContent = product.price;
 
