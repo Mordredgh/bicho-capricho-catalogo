@@ -1,4 +1,4 @@
-const CACHE_NAME = "bicho-capricho-v1";
+const CACHE_NAME = "bicho-capricho-v2-20260712";
 const ASSETS = [
   "./",
   "./index.html",
@@ -37,6 +37,22 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   // Solo interceptar peticiones GET locales
   if (e.request.method !== "GET" || !e.request.url.startsWith(self.location.origin)) {
+    return;
+  }
+
+  const url = new URL(e.request.url);
+  const mustBeFresh = e.request.mode === "navigate" || /\.(html|css|js)$/i.test(url.pathname);
+
+  if (mustBeFresh) {
+    e.respondWith(
+      fetch(e.request).then((networkResponse) => {
+        if (networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, responseClone));
+        }
+        return networkResponse;
+      }).catch(() => caches.match(e.request))
+    );
     return;
   }
 

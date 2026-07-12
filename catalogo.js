@@ -116,6 +116,7 @@ async function loadProducts() {
         freeShipping: p.free_shipping || false,
         mockClass:    p.mock_class || 'tote',
         coleccion:    p.coleccion || '',
+        grupoDiseno:  p.grupo_diseno || '',
         precioEstampadoDesde: parseFloat(p.precio_estampado_desde) || 0,
         createdAt:    p.created_at || ''
       }));
@@ -235,7 +236,7 @@ function createCardHTML(p, index) {
   ` : '';
 
   return `
-    <article class="catalog-card ${tilt} ${doodle}" data-index="${index}">
+    <article class="catalog-card ${tilt} ${doodle}" data-index="${index}" data-product-id="${esc(p.id || '')}">
       ${cardDoodle}
       ${washiTapeHTML}
       <div class="photo ${color} ${frameClass}">
@@ -244,8 +245,8 @@ function createCardHTML(p, index) {
       </div>
       <div class="card-body">
         <span class="category">${catLabel[p.category] || p.category}</span>
-        <h3>${esc(p.name)}</h3>
-        <p>${esc(p.desc)}</p>
+        <h3>${esc(p.displayName || p.name)}</h3>
+        <p>${esc(p.displayDesc || p.desc)}</p>
         ${colorsHTML}
         <div class="price-row"><strong>${esc(p.price)}</strong><button aria-label="Pedir">Ver más <span>+</span></button></div>
       </div>
@@ -254,11 +255,52 @@ function createCardHTML(p, index) {
   `;
 }
 
+function groupCollectionProducts(products) {
+  const groups = new Map();
+  const cutPattern = /\s-\s(Hombre|Mujer|Juvenil|Niños)$/i;
+  products.forEach(product => {
+    const match = product.name.match(cutPattern);
+    const baseName = match ? product.name.slice(0, match.index).trim() : product.name;
+    const designName = product.grupoDiseno || baseName;
+    const key = `${product.coleccion || 'sin-coleccion'}::${designName.toLowerCase()}`;
+    if (!groups.has(key)) groups.set(key, { ...product, baseName: designName, variants: [] });
+    groups.get(key).variants.push(product);
+  });
+  return [...groups.values()].map(group => {
+    const preferred = group.variants.find(v => /\s-\sHombre$/i.test(v.name)) || group.variants[0];
+    const displayName = preferred.grupoDiseno || group.baseName || group.variants[0].name.replace(/\s-\s(?:Hombre|Mujer|Juvenil|Ni.os)$/i, '').trim();
+    return { ...preferred, variants: group.variants, displayName, displayDesc: `Diseño ${displayName}. Elige tu corte.` };
+  });
+}
+
 function renderCatalog() {
-  const slider = document.getElementById('catalog-slider');
-  const dotsContainer = document.getElementById('slider-dots');
-  
-  if (filteredProducts.length === 0) {
+  const normalProducts = filteredProducts.filter(p => !p.coleccion);
+  const collectionProducts = groupCollectionProducts(filteredProducts.filter(p => p.coleccion));
+  const productsSection = document.getElementById('productos-subsection');
+  if (productsSection) productsSection.style.display = normalProducts.length ? '' : 'none';
+  renderCatalogSlider('catalog', normalProducts);
+  renderCatalogSlider('colecciones', collectionProducts);
+  const collectionsSection = document.getElementById('colecciones-subsection');
+  if (collectionsSection) collectionsSection.style.display = collectionProducts.length ? '' : 'none';
+}
+
+function renderCatalogSlider(prefix, products) {
+  const isCollections = prefix === 'colecciones';
+  const slider = document.getElementById(isCollections ? 'colecciones-slider' : 'catalog-slider');
+  const dotsContainer = document.getElementById(isCollections ? 'colecciones-slider-dots' : 'slider-dots');
+  if (!slider || !dotsContainer) return;
+  window._catalogDisplayProducts = window._catalogDisplayProducts || new Map();
+  products.forEach(product => {
+    if (product.id) window._catalogDisplayProducts.set(product.id, product);
+  });
+
+  if (products.length === 0) {
+    const emptyTitle = !isCollections && currentCategory === 'todos' && currentColeccion === 'todas' && !searchQuery.trim()
+      ? 'A\u00fan no hay productos publicados'
+      : 'No encontramos ese capricho';
+    const emptyDescription = !isCollections && currentCategory === 'todos' && currentColeccion === 'todas' && !searchQuery.trim()
+      ? 'Pronto aparecer\u00e1n aqu\u00ed nuestros productos disponibles.'
+      : 'Prueba buscando con palabras sencillas como "taza", "termo", "vela" o "bolsa".';
     slider.innerHTML = `
       <div class="empty-state">
         <img src="assets/mascotas/STICKER/sticker pensando.webp" alt="Flik pensando">
@@ -266,9 +308,13 @@ function renderCatalog() {
         <p>Prueba buscando con palabras sencillas como "taza", "termo", "vela" o "bolsa".</p>
       </div>
     `;
+    const emptyHeading = slider.querySelector('.empty-state h3');
+    const emptyCopy = slider.querySelector('.empty-state p');
+    if (emptyHeading) emptyHeading.textContent = emptyTitle;
+    if (emptyCopy) emptyCopy.textContent = emptyDescription;
     dotsContainer.innerHTML = '';
-    const btnPrev = document.getElementById('slider-prev');
-    const btnNext = document.getElementById('slider-next');
+    const btnPrev = document.getElementById(isCollections ? 'colecciones-slider-prev' : 'slider-prev');
+    const btnNext = document.getElementById(isCollections ? 'colecciones-slider-next' : 'slider-next');
     if (btnPrev && btnNext) {
       btnPrev.style.display = 'none';
       btnNext.style.display = 'none';
@@ -278,8 +324,8 @@ function renderCatalog() {
 
   // Agotados van al final del listado, no mezclados con los disponibles
   const sortedForDisplay = [
-    ...filteredProducts.filter(p => p.badge !== 'agotado'),
-    ...filteredProducts.filter(p => p.badge === 'agotado')
+    ...products.filter(p => p.badge !== 'agotado'),
+    ...products.filter(p => p.badge === 'agotado')
   ];
 
   const chunks = [];
@@ -290,17 +336,15 @@ function renderCatalog() {
   let html = '';
   let dots = '';
   chunks.forEach((chunk, pageIndex) => {
-    html += `<div class="catalog-page" id="page-${pageIndex}"><div class="product-grid">`;
+    html += `<div class="catalog-page" id="${prefix}-page-${pageIndex}"><div class="product-grid">`;
     // Bug #16 fix: use the filtered index offset instead of indexOf (which can return wrong result
     // when filteredProducts is a subset of allProducts with object references that may not match)
     const pageOffset = pageIndex * 8;
     chunk.forEach((p, chunkIdx) => {
-      const originalIndex = allProducts.findIndex(ap => ap.name === p.name && ap.category === p.category);
-      const displayIndex = originalIndex !== -1 ? originalIndex : pageOffset + chunkIdx;
-      html += createCardHTML(p, displayIndex);
+      html += createCardHTML(p, pageOffset + chunkIdx);
     });
     html += `</div></div>`;
-    dots += `<div class="slider-dot ${pageIndex === 0 ? 'active' : ''}" data-target="page-${pageIndex}"></div>`;
+    dots += `<div class="slider-dot ${pageIndex === 0 ? 'active' : ''}" data-target="${prefix}-page-${pageIndex}"></div>`;
   });
 
   slider.innerHTML = html;
@@ -323,8 +367,8 @@ function renderCatalog() {
     });
   });
 
-  const btnPrev = document.getElementById('slider-prev');
-  const btnNext = document.getElementById('slider-next');
+  const btnPrev = document.getElementById(isCollections ? 'colecciones-slider-prev' : 'slider-prev');
+  const btnNext = document.getElementById(isCollections ? 'colecciones-slider-next' : 'slider-next');
   if (btnPrev && btnNext) {
     btnPrev.style.display = chunks.length > 1 ? 'grid' : 'none';
     btnNext.style.display = chunks.length > 1 ? 'grid' : 'none';
@@ -336,8 +380,8 @@ function renderCatalog() {
   document.querySelectorAll('.catalog-card').forEach(card => {
     card.addEventListener('click', (e) => {
       spawnDoodleConfetti(e.pageX, e.pageY);
-      const idx = card.dataset.index;
-      openProductModal(allProducts[idx]);
+      const product = window._catalogDisplayProducts.get(card.dataset.productId) || allProducts.find(p => p.id && p.id === card.dataset.productId);
+      if (product) openProductModal(product);
     });
   });
 
@@ -440,6 +484,20 @@ function renderFilterButtons(categories) {
 const coleccionFilterContainer = document.getElementById('colecciones-filters');
 const coleccionBannerEl = document.getElementById('coleccion-banner');
 let _coleccionesData = [];
+
+function relocateCollectionControls() {
+  const section = document.getElementById('colecciones-subsection');
+  const heading = section && section.querySelector('.catalog-subsection-heading');
+  if (!section || !heading || !coleccionFilterContainer || !coleccionBannerEl) return;
+  let label = section.querySelector('.collection-filter-label');
+  if (!label) {
+    label = document.createElement('p');
+    label.className = 'collection-filter-label';
+    label.textContent = 'Filtrar colecciones';
+  }
+  heading.before(label, coleccionFilterContainer, coleccionBannerEl);
+}
+relocateCollectionControls();
 
 if (coleccionFilterContainer) {
   coleccionFilterContainer.addEventListener('click', (e) => {
@@ -574,7 +632,26 @@ let currentImageIndex = 0;
 function openProductModal(product) {
   const modal = document.getElementById('p-modal-overlay');
   
-  document.getElementById('pm-title').textContent = product.name;
+  const modalDisplayName = product.displayName || product.name.replace(/\s-\s(?:Hombre|Mujer|Juvenil|Ni.os)$/i, '').trim();
+  document.getElementById('pm-title').textContent = modalDisplayName;
+  const variantsContainer = document.getElementById('pm-variants-container');
+  if (variantsContainer) {
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+    variantsContainer.hidden = variants.length < 2;
+    variantsContainer.innerHTML = variants.length > 1
+      ? `<span class="pm-variants-label">Elige el corte:</span><div class="pm-variants-list">${variants.map(variant => {
+          const label = variant.name.split(/\s-\s/).pop();
+          const active = variant.id === product.id ? ' active' : '';
+          return `<button type="button" class="pm-variant-btn${active}" data-variant-id="${esc(variant.id || '')}">${esc(label)}</button>`;
+        }).join('')}</div>`
+      : '';
+    variantsContainer.querySelectorAll('[data-variant-id]').forEach(button => {
+      button.addEventListener('click', () => {
+        const variant = variants.find(item => item.id === button.dataset.variantId);
+        if (variant) openProductModal({ ...variant, variants });
+      });
+    });
+  }
   const pmCatText = catLabel[product.category] || product.category;
   const coleccionNombre = product.coleccion
     ? ((_coleccionesData.find(c => c.id === product.coleccion) || {}).nombre || product.coleccion)
@@ -834,7 +911,7 @@ function openProductModal(product) {
   }
 
   currentImageIndex = 0;
-  currentModalProductName = product.name;
+  currentModalProductName = modalDisplayName;
   modalTriggerEl = document.activeElement;
   renderModalCarousel();
   modal.classList.add('open');

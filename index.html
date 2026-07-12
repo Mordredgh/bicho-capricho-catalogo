@@ -185,6 +185,11 @@
           </div>
         </div>
 
+        <div class="catalog-subsection" id="productos-subsection">
+          <div class="catalog-subsection-heading">
+            <h3>Productos</h3>
+            <p>Ideas listas para regalar y personalizar.</p>
+          </div>
         <div class="slider-container">
           <button class="slider-btn prev-btn" id="slider-prev" aria-label="Página anterior">&larr;</button>
           <div class="catalog-slider" id="catalog-slider">
@@ -193,6 +198,23 @@
           <button class="slider-btn next-btn" id="slider-next" aria-label="Página siguiente">&rarr;</button>
         </div>
         <div class="slider-dots" id="slider-dots"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="collections-section" id="colecciones-subsection" style="display:none;"><div class="wrap"><div class="catalog-subsection collections-subsection">
+          <div class="catalog-subsection-heading">
+            <h3>Colecciones</h3>
+            <p>Diseños agrupados por corte. Elige la variante dentro de cada ficha.</p>
+          </div>
+          <div class="slider-container">
+            <button class="slider-btn prev-btn" id="colecciones-slider-prev" aria-label="Página anterior de colecciones">&larr;</button>
+            <div class="catalog-slider" id="colecciones-slider"></div>
+            <button class="slider-btn next-btn" id="colecciones-slider-next" aria-label="Página siguiente de colecciones">&rarr;</button>
+          </div>
+          <div class="slider-dots" id="colecciones-slider-dots"></div>
+        </div>
       </div>
     </section>
 
@@ -373,6 +395,7 @@
             <button type="button" class="pm-share-btn" id="pm-share-btn" aria-label="Compartir producto" title="Compartir">↗ Compartir</button>
           </div>
           <h3 class="pm-title" id="pm-title">Nombre Producto</h3>
+          <div class="pm-variants" id="pm-variants-container" hidden></div>
           <p class="pm-desc" id="pm-desc">Descripción larga...</p>
           
           <div class="pm-guarantee">

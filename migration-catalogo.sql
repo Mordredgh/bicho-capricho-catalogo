@@ -14,6 +14,17 @@ ALTER TABLE products
   ADD COLUMN IF NOT EXISTS size_guide           text    DEFAULT 'none',
   ADD COLUMN IF NOT EXISTS free_shipping        boolean DEFAULT false;
 
+-- 1b. Agrupa variantes de un mismo diseño sin depender del nombre visible.
+ALTER TABLE catalogo_productos
+  ADD COLUMN IF NOT EXISTS grupo_diseno text;
+
+-- Backfill compatible con los productos ya generados como "Diseño - Corte".
+UPDATE catalogo_productos
+SET grupo_diseno = trim(regexp_replace(nombre, '\\s-\\s(Hombre|Mujer|Juvenil|Niños)\\s*$', '', 'i'))
+WHERE coleccion IS NOT NULL
+  AND coalesce(grupo_diseno, '') = ''
+  AND nombre ~* '\\s-\\s(Hombre|Mujer|Juvenil|Niños)\\s*$';
+
 -- 2. Storage bucket bc-catalogo
 -- ─────────────────────────────────────────────────────────────────
 -- PASO MANUAL (no se puede via SQL):

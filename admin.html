@@ -1387,6 +1387,7 @@
       free_shipping:        p.freeShipping || false,
       mock_class:           p.mockClass || 'tote',
       coleccion:            p.coleccion || '',
+      grupo_diseno:         p.groupDesign || '',
       precio_estampado_desde: p.precioEstampadoDesde != null ? p.precioEstampadoDesde : null,
       activo:               true
     };
@@ -1412,6 +1413,7 @@
       freeShipping: r.free_shipping || false,
       mockClass:    r.mock_class || 'tote',
       coleccion:    r.coleccion || '',
+      groupDesign:  r.grupo_diseno || '',
       precioEstampadoDesde: r.precio_estampado_desde
     };
   }
@@ -1873,6 +1875,7 @@
         free_shipping: false,
         mock_class: 'tshirt',
         coleccion: d.coleccionId || null,
+        grupo_diseno: d.name,
         activo: true
       };
 
@@ -2088,7 +2091,7 @@
     // Productos de colección viven aparte (bajo cada colección en su propia
     // sección) — no se mezclan con el catálogo general de productos sueltos.
     // También se ocultan los pendientes de eliminar (ventana de "Deshacer").
-    const allList = getProducts().filter(p => !p.coleccion && !pendingDeleteIds.has(p.id));
+    const allList = getProducts().filter(p => !pendingDeleteIds.has(p.id));
     const cats = new Set(allList.map(p => p.category));
     document.getElementById('stat-total').textContent = allList.length;
     document.getElementById('stat-badge').textContent = allList.filter(p => p.badge).length;
@@ -2248,7 +2251,7 @@
   });
 
   function exportProductsCSV() {
-    const list = getProducts().filter(p => !p.coleccion);
+    const list = getProducts();
     if (!list.length) { showToast('⚠️ No hay productos que exportar'); return; }
     const headers = ['Nombre', 'Categoría', 'Precio', 'Badge', 'Descripción', 'Colección'];
     const rows = list.map(p => [p.name, p.category, p.price, p.badge || '', p.desc, p.coleccion || '']);
@@ -2311,6 +2314,7 @@
   let editingId = null;
   let currentMainImage = '';
   let currentGallery = [];
+  let currentGroupDesign = '';
   let selectedColors = [];
 
   // Color inputs sync
@@ -2505,6 +2509,7 @@
     form.reset();
     currentMainImage = '';
     currentGallery = [];
+    currentGroupDesign = '';
     document.getElementById('preview-main').innerHTML = '';
     document.getElementById('preview-gallery').innerHTML = '';
 
@@ -2532,6 +2537,7 @@
         selectedColors  = p.colors || [];
         currentMainImage = p.mainImage || '';
         currentGallery  = p.galleryImages || [];
+        currentGroupDesign = p.groupDesign || '';
         renderSwatches();
         renderMainPreview();
         renderGalleryPreviews();
@@ -2622,7 +2628,7 @@
     if (!badge && !badgeWarningConfirmed) { openBadgeConfirm(); return; }
     badgeWarningConfirmed = false;
 
-    const product = { name, category, price, priceMin, priceMax, sizeGuide, desc, badge, badgePos, color, coleccion, precioEstampadoDesde,
+    const product = { name, category, price, priceMin, priceMax, sizeGuide, desc, badge, badgePos, color, coleccion, groupDesign: currentGroupDesign, precioEstampadoDesde,
                       colors: selectedColors, mainImage: currentMainImage, galleryImages: currentGallery };
     const row = toRow(product);
 

@@ -1,5 +1,15 @@
 # fix_plan.md — Bicho Capricho Catálogo 2026
 
+## Sitio no listado — CERRADO (2026-07-12)
+
+- [x] `robots.txt` con `Disallow: /` completo, `sitemap.xml` eliminado
+      (ya no aplica), `Dockerfile` actualizado.
+- [x] `<meta name="robots">` cambiado a `noindex, nofollow, noarchive`.
+- [x] Header HTTP `X-Robots-Tag` agregado en nginx (más confiable que
+      el meta tag solo).
+- Nota: esto oculta el sitio de buscadores, NO restringe acceso — sigue
+  siendo público para cualquiera con el link. Gerardo no pidió login.
+
 ## Bloqueantes reales (pre-lanzamiento)
 
 - [ ] Links de redes sociales del footer siguen `href="#"` (Instagram,
