@@ -873,10 +873,18 @@
       <button class="admin-tab active" data-filter="todos">Todo</button>
     </div>
 
+    <div id="bulk-actions-bar" style="display:none; align-items:center; gap:12px; background:var(--lavender); border:2px solid var(--forest); border-radius:12px; padding:10px 16px; margin-bottom:12px;">
+      <strong id="bulk-count-text">0 seleccionados</strong>
+      <button type="button" class="btn-save-sm" onclick="bulkToggleAgotado()">🚫 Marcar agotado</button>
+      <button type="button" class="btn-save-sm" style="background:var(--white);color:var(--forest);" onclick="bulkMarkDisponible()">✅ Marcar disponible</button>
+      <button type="button" class="btn-save-sm" style="background:#e56789;box-shadow:3px 4px 0 #a94a5f;" onclick="bulkDelete()">🗑️ Eliminar</button>
+      <button type="button" class="btn-cancel" style="margin:0;" onclick="clearBulkSelection()">Cancelar</button>
+    </div>
     <div class="product-table">
       <table>
         <thead>
           <tr>
+            <th style="width:34px"><input type="checkbox" id="bulk-select-all"></th>
             <th style="width:60px">Foto</th>
             <th>Nombre</th>
             <th>Categoría</th>
@@ -887,7 +895,7 @@
           </tr>
         </thead>
         <tbody id="products-tbody">
-          <tr class="empty-row"><td colspan="6">No hay productos aún. ¡Agrega el primero! ✦</td></tr>
+          <tr class="empty-row"><td colspan="7">No hay productos aún. ¡Agrega el primero! ✦</td></tr>
         </tbody>
       </table>
     </div>
@@ -1878,8 +1886,8 @@
 
   async function renderTable() {
     const tbody = document.getElementById('products-tbody');
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px">Cargando...</td></tr>';
-    try { await fetchAdminProducts(); } catch (e) { tbody.innerHTML = `<tr><td colspan="7" style="color:red;padding:20px">❌ ${e.message}</td></tr>`; return; }
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px">Cargando...</td></tr>';
+    try { await fetchAdminProducts(); } catch (e) { tbody.innerHTML = `<tr><td colspan="8" style="color:red;padding:20px">❌ ${e.message}</td></tr>`; return; }
 
     // Productos de colección viven aparte (bajo cada colección en su propia
     // sección) — no se mezclan con el catálogo general de productos sueltos.
@@ -1901,7 +1909,8 @@
     }
 
     if (!displayList.length) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="7">No hay productos que coincidan. ¡Agrega uno nuevo o ajusta la búsqueda! ✦</td></tr>';
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No hay productos que coincidan. ¡Agrega uno nuevo o ajusta la búsqueda! ✦</td></tr>';
+      renderBulkBar();
       return;
     }
 
@@ -1913,6 +1922,7 @@
 
     tbody.innerHTML = displayList.map(p => `
       <tr>
+        <td><input type="checkbox" class="bulk-row-check" data-id="${p.id}" ${bulkSelected.has(p.id) ? 'checked' : ''}></td>
         <td class="thumb-cell"><img src="${p.mainImage || 'assets/favicon-180.png'}" alt="Thumb"></td>
         <td><strong>${esc(p.name)}</strong></td>
         <td><span class="cat-pill cat-${p.category}">${p.category}</span></td>
@@ -1927,7 +1937,80 @@
         </td>
       </tr>
     `).join('');
+
+    tbody.querySelectorAll('.bulk-row-check').forEach(cb => {
+      cb.addEventListener('change', () => {
+        if (cb.checked) bulkSelected.add(cb.dataset.id); else bulkSelected.delete(cb.dataset.id);
+        renderBulkBar();
+      });
+    });
+    renderBulkBar();
   }
+
+  // ── Selección múltiple + acciones en bloque ─────────
+  let bulkSelected = new Set();
+
+  function renderBulkBar() {
+    const bar = document.getElementById('bulk-actions-bar');
+    const countText = document.getElementById('bulk-count-text');
+    if (!bar) return;
+    if (bulkSelected.size > 0) {
+      bar.style.display = 'flex';
+      countText.textContent = `${bulkSelected.size} seleccionado${bulkSelected.size === 1 ? '' : 's'}`;
+    } else {
+      bar.style.display = 'none';
+    }
+    const selectAll = document.getElementById('bulk-select-all');
+    if (selectAll) {
+      const rowChecks = document.querySelectorAll('.bulk-row-check');
+      selectAll.checked = rowChecks.length > 0 && Array.from(rowChecks).every(cb => cb.checked);
+    }
+  }
+
+  function clearBulkSelection() {
+    bulkSelected.clear();
+    renderTable();
+  }
+  window.clearBulkSelection = clearBulkSelection;
+
+  document.getElementById('bulk-select-all').addEventListener('change', (e) => {
+    document.querySelectorAll('.bulk-row-check').forEach(cb => {
+      cb.checked = e.target.checked;
+      if (e.target.checked) bulkSelected.add(cb.dataset.id); else bulkSelected.delete(cb.dataset.id);
+    });
+    renderBulkBar();
+  });
+
+  async function bulkToggleAgotado() {
+    for (const id of bulkSelected) {
+      try { await supaAdmin('PATCH', 'catalogo_productos', { badge: 'agotado' }, `?id=eq.${id}`); } catch (e) { console.warn(e.message); }
+    }
+    showToast(`🚫 ${bulkSelected.size} producto(s) marcados como agotados`);
+    bulkSelected.clear();
+    await renderTable();
+  }
+  window.bulkToggleAgotado = bulkToggleAgotado;
+
+  async function bulkMarkDisponible() {
+    for (const id of bulkSelected) {
+      try { await supaAdmin('PATCH', 'catalogo_productos', { badge: '' }, `?id=eq.${id}`); } catch (e) { console.warn(e.message); }
+    }
+    showToast(`✅ ${bulkSelected.size} producto(s) marcados como disponibles`);
+    bulkSelected.clear();
+    await renderTable();
+  }
+  window.bulkMarkDisponible = bulkMarkDisponible;
+
+  async function bulkDelete() {
+    if (!confirm(`¿Eliminar ${bulkSelected.size} producto(s)? Esta acción no se puede deshacer.`)) return;
+    for (const id of bulkSelected) {
+      try { await supaAdmin('DELETE', 'catalogo_productos', null, `?id=eq.${id}`); } catch (e) { console.warn(e.message); }
+    }
+    showToast(`🗑️ ${bulkSelected.size} producto(s) eliminados`);
+    bulkSelected.clear();
+    await renderTable();
+  }
+  window.bulkDelete = bulkDelete;
 
   document.getElementById('admin-search').addEventListener('input', (e) => {
     currentAdminSearch = e.target.value;
@@ -2239,10 +2322,19 @@
     }
     document.getElementById('modal-overlay').classList.add('open');
     setTimeout(() => document.getElementById('f-name').focus(), 100);
+    formDirty = false;
   }
 
+  let formDirty = false;
+  document.getElementById('product-form').addEventListener('input', () => { formDirty = true; });
+  document.getElementById('product-form').addEventListener('change', () => { formDirty = true; });
+
   function editProduct(id)    { openModal(id); }
-  function closeModal()       { document.getElementById('modal-overlay').classList.remove('open'); }
+  function closeModal() {
+    if (formDirty && !confirm('Tienes cambios sin guardar. ¿Cerrar de todos modos?')) return;
+    formDirty = false;
+    document.getElementById('modal-overlay').classList.remove('open');
+  }
   function closeModalOutside(e) { if (e.target === document.getElementById('modal-overlay')) closeModal(); }
 
   let badgeWarningConfirmed = false;
@@ -2300,6 +2392,7 @@
         showToast('✅ Producto actualizado');
       }
       await renderTable();
+      formDirty = false;
       closeModal();
     } catch (err) {
       showToast(`❌ Error al guardar: ${err.message}`);
