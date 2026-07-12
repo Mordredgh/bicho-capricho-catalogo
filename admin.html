@@ -608,9 +608,15 @@
     .design-card-body { display: flex; gap: 30px; flex-wrap: wrap; padding: 10px 26px 26px; }
     .design-editor-col { flex: 0 0 240px; }
     .design-editor-hint { font-size: 12px; color: var(--olive); margin-bottom: 10px; font-weight: 700; line-height: 1.4; }
+    .design-mockup-select, .design-coleccion-select {
+      appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%231c4f32'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center; background-size: 16px;
+      padding-right: 36px;
+    }
     .design-mockup-select {
-      width: 100%; margin-bottom: 12px; padding: 9px 12px; border: 1.5px solid rgba(28,79,50,.2);
-      border-radius: 10px; font: 700 12px 'Nunito'; background: var(--white); cursor: pointer;
+      width: 100%; margin-bottom: 12px; padding: 9px 36px 9px 12px; border: 1.5px solid rgba(28,79,50,.2);
+      border-radius: 10px; font: 700 12px 'Nunito'; background-color: var(--white); cursor: pointer;
       box-shadow: 0 2px 5px rgba(28,79,50,.06);
     }
     .design-canvas-frame {
@@ -629,8 +635,8 @@
       color: var(--olive); display: block; margin-bottom: 7px;
     }
     .design-coleccion-select {
-      width: 100%; margin-bottom: 20px; padding: 10px 12px; border: 1.5px solid rgba(28,79,50,.2);
-      border-radius: 10px; font: 700 13px 'Nunito'; background: var(--white); cursor: pointer;
+      width: 100%; margin-bottom: 20px; padding: 10px 36px 10px 12px; border: 1.5px solid rgba(28,79,50,.2);
+      border-radius: 10px; font: 700 13px 'Nunito'; background-color: var(--white); cursor: pointer;
       box-shadow: 0 2px 5px rgba(28,79,50,.06);
     }
     .design-mockup-panel {
@@ -644,24 +650,31 @@
       text-transform: uppercase; letter-spacing: .6px; display: inline-block;
       padding: 3px 11px; border-radius: 999px; margin-bottom: 10px;
     }
-    .design-chip-row { display: flex; flex-wrap: wrap; gap: 12px; }
+    .design-chip-row { display: grid; grid-template-columns: repeat(auto-fill, 52px); gap: 10px 8px; }
     .design-color-chip {
       display: flex; flex-direction: column; align-items: center; gap: 5px;
-      width: 46px; cursor: pointer; opacity: .35; transition: .15s;
+      width: 52px; cursor: pointer; transition: .15s;
     }
-    .design-color-chip:hover { opacity: .7; }
-    .design-color-chip.active { opacity: 1; }
-    .design-color-chip input { display: none; }
     .design-color-dot {
       width: 30px; height: 30px; border-radius: 50%; position: relative; display: block;
-      border: 2px solid var(--white); box-shadow: 0 0 0 1.5px rgba(28,79,50,.25);
+      border: 2px solid var(--white); box-shadow: 0 0 0 1.5px rgba(28,79,50,.18);
+      filter: grayscale(70%); opacity: .4; transition: .15s;
     }
-    .design-color-chip.active .design-color-dot { box-shadow: 0 0 0 2px var(--forest); }
+    .design-color-chip:hover .design-color-dot { opacity: .7; filter: grayscale(30%); }
+    .design-color-chip input { display: none; }
+    .design-color-chip.active .design-color-dot {
+      filter: none; opacity: 1; box-shadow: 0 0 0 2.5px var(--forest), 0 3px 6px rgba(28,79,50,.25);
+      transform: scale(1.06);
+    }
     .design-color-chip.active .design-color-dot::after {
       content: '✓'; position: absolute; inset: 0; display: grid; place-items: center;
-      color: #fff; font-size: 13px; font-weight: 900; text-shadow: 0 1px 2px rgba(0,0,0,.5);
+      color: #fff; font-size: 13px; font-weight: 900; text-shadow: 0 1px 2px rgba(0,0,0,.6);
     }
-    .design-chip-label { font-size: 9px; font-weight: 700; color: var(--forest); text-align: center; line-height: 1.15; }
+    .design-chip-label {
+      font-size: 9px; font-weight: 700; text-align: center; line-height: 1.15;
+      min-height: 22px; color: var(--olive); transition: .15s;
+    }
+    .design-color-chip.active .design-chip-label { color: var(--forest); }
     .design-generate-btn { margin-top: 18px; }
     .design-progress { font-size: 12px; color: var(--olive); padding: 0 26px 22px; }
     .design-progress-bar {
@@ -684,11 +697,13 @@
       background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;
       box-shadow: 0 2px 6px rgba(28,79,50,.15);
     }
+    .design-cut-bulk { display: inline-flex; gap: 6px; }
     .design-cut-bulk button {
-      background: none; border: none; color: var(--grape); font: 800 10px 'Nunito';
-      cursor: pointer; padding: 2px 4px; text-decoration: underline; text-underline-offset: 2px;
+      background: var(--white); border: 1.5px solid var(--grape); color: var(--grape);
+      font: 800 9px 'Nunito'; text-transform: uppercase; letter-spacing: .3px;
+      cursor: pointer; padding: 3px 9px; border-radius: 999px; transition: .15s;
     }
-    .design-cut-bulk button:hover { color: var(--forest); }
+    .design-cut-bulk button:hover { background: var(--grape); color: var(--white); }
 
     /* ── SCRAPBOOK BOUTIQUE UPGRADES ── */
     
