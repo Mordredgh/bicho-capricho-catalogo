@@ -745,19 +745,9 @@
     <!-- Colecciones -->
     <div class="config-box">
       <h3>🎬 Colecciones</h3>
-      <p>Crea la colección una vez (ej. "Mario Movie") y luego elígela en cada producto desde un menú — evita duplicados por escribirla distinto cada vez.</p>
-      <div class="config-row" style="flex-wrap:wrap; gap:14px; align-items:flex-end;">
-        <div class="form-group">
-          <label>Nombre</label>
-          <input type="text" id="coleccion-nombre" placeholder="Ej: Mario Movie" style="width:200px">
-        </div>
-        <div class="form-group">
-          <label>Emoji</label>
-          <input type="text" id="coleccion-emoji" placeholder="🎬" maxlength="4" style="width:60px;text-align:center">
-        </div>
-        <button type="button" class="btn-save-sm" onclick="addColeccion()">+ Agregar colección</button>
-      </div>
-      <div id="coleccion-list" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;"></div>
+      <p>Crea la colección una vez (ej. "Mario Movie") y luego elígela en cada producto desde un menú — evita duplicados por escribirla distinto cada vez. Cada colección puede tener su propia descripción y banner.</p>
+      <button type="button" class="btn-save-sm" style="margin-bottom:14px" onclick="openColeccionModal()">+ Nueva colección</button>
+      <div id="coleccion-list" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
     </div>
 
     <!-- Mockups de playeras reusables -->
@@ -955,6 +945,52 @@
         <div class="form-actions">
           <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>
           <button type="submit" class="btn-save" id="modal-save-btn">Guardar producto ✦</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ MODAL COLECCIÓN (separado del de producto) ════════ -->
+<div class="modal-overlay" id="coleccion-modal-overlay" onclick="closeColeccionModalOutside(event)">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="coleccion-modal-title">
+    <div class="modal-header">
+      <h3 id="coleccion-modal-title">Nueva colección</h3>
+      <button class="modal-close" onclick="closeColeccionModal()" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="coleccion-form" onsubmit="saveColeccion(event)" novalidate>
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>Nombre *</label>
+            <input type="text" id="cf-nombre" required placeholder="Ej: Mario Movie">
+          </div>
+          <div class="form-group">
+            <label>Emoji</label>
+            <input type="text" id="cf-emoji" maxlength="4" placeholder="🎬">
+          </div>
+          <div class="form-group">
+            <label>Visibilidad</label>
+            <label style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+              <input type="checkbox" id="cf-activa" checked style="width:18px;height:18px;">
+              <span style="font-size:13px;">Activa (visible en el catálogo)</span>
+            </label>
+          </div>
+          <div class="form-group full">
+            <label>Descripción <small style="font-weight:400;color:#678d47">(aparece arriba del catálogo cuando esta colección está activa)</small></label>
+            <textarea id="cf-descripcion" placeholder="Ej: Edición limitada inspirada en la nueva película. Diseños únicos por tiempo limitado."></textarea>
+          </div>
+          <div class="form-group full">
+            <label>Banner / portada (opcional)</label>
+            <div class="file-input-wrapper">
+              <input type="file" id="cf-banner" accept="image/png, image/jpeg, image/webp">
+              <div class="preview-container" id="cf-banner-preview"></div>
+            </div>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-cancel" onclick="closeColeccionModal()">Cancelar</button>
+          <button type="submit" class="btn-save" id="coleccion-modal-save-btn">Guardar colección ✦</button>
         </div>
       </form>
     </div>
@@ -1194,27 +1230,117 @@
     renderColeccionSelect();
   }
 
-  async function addColeccion() {
-    const nombreInput = document.getElementById('coleccion-nombre');
-    const emojiInput = document.getElementById('coleccion-emoji');
-    const nombre = nombreInput.value.trim();
-    const emoji = emojiInput.value.trim() || '🎬';
-    if (!nombre) { showToast('⚠️ Ponle nombre a la colección'); return; }
-    const id = slugify(nombre);
-    if (!id) { showToast('⚠️ Nombre inválido'); return; }
-    try {
-      // upsert: si ya existe una colección con el mismo slug (ej. "Mario Movie"
-      // y "mario movie" caen en el mismo id), actualiza en vez de duplicar.
-      const { error } = await sbClient.from('catalogo_colecciones').upsert({ id, nombre, emoji });
-      if (error) throw error;
-      nombreInput.value = '';
-      emojiInput.value = '';
-      showToast('✅ Colección guardada');
-      await loadColecciones();
-    } catch (e) {
-      showToast(`❌ Error: ${e.message}`);
+  let editingColeccionId = null;
+  let currentColeccionBanner = '';
+
+  function openColeccionModal(id = null) {
+    editingColeccionId = id;
+    document.getElementById('coleccion-form').reset();
+    currentColeccionBanner = '';
+    document.getElementById('cf-banner-preview').innerHTML = '';
+    document.getElementById('coleccion-modal-title').textContent = id === null ? 'Nueva colección' : 'Editar colección';
+    document.getElementById('coleccion-modal-save-btn').textContent = id === null ? 'Guardar colección ✦' : 'Actualizar colección ✦';
+
+    if (id !== null) {
+      const c = _colecciones.find(x => x.id === id);
+      if (c) {
+        document.getElementById('cf-nombre').value = c.nombre;
+        document.getElementById('cf-emoji').value = c.emoji || '';
+        document.getElementById('cf-descripcion').value = c.descripcion || '';
+        document.getElementById('cf-activa').checked = c.activa !== false;
+        currentColeccionBanner = c.banner_url || '';
+        renderColeccionBannerPreview();
+      }
+    } else {
+      document.getElementById('cf-activa').checked = true;
+    }
+
+    document.getElementById('coleccion-modal-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('cf-nombre').focus(), 100);
+  }
+  window.openColeccionModal = openColeccionModal;
+
+  function closeColeccionModal() {
+    document.getElementById('coleccion-modal-overlay').classList.remove('open');
+  }
+  window.closeColeccionModal = closeColeccionModal;
+
+  function closeColeccionModalOutside(e) {
+    if (e.target === document.getElementById('coleccion-modal-overlay')) closeColeccionModal();
+  }
+  window.closeColeccionModalOutside = closeColeccionModalOutside;
+
+  function renderColeccionBannerPreview() {
+    const container = document.getElementById('cf-banner-preview');
+    if (currentColeccionBanner) {
+      container.innerHTML = `
+        <div class="admin-preview-wrapper">
+          <img src="${currentColeccionBanner}" class="preview-img">
+          <button type="button" class="preview-remove" onclick="removeColeccionBanner()">✕</button>
+        </div>
+      `;
+    } else {
+      container.innerHTML = '';
     }
   }
+
+  function removeColeccionBanner() {
+    currentColeccionBanner = '';
+    renderColeccionBannerPreview();
+    document.getElementById('cf-banner').value = '';
+  }
+  window.removeColeccionBanner = removeColeccionBanner;
+
+  document.getElementById('cf-banner').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const safeName = file.name.replace(/[^a-z0-9.]/gi, '-').slice(0, 60);
+      const path = `colecciones/${Date.now()}-${safeName}`;
+      currentColeccionBanner = await supaUploadAuth(path, file);
+      renderColeccionBannerPreview();
+    } catch (err) {
+      showToast(`❌ Error subiendo banner: ${err.message}`);
+    }
+  });
+
+  async function saveColeccion(e) {
+    if (e) e.preventDefault();
+    const nombre = document.getElementById('cf-nombre').value.trim();
+    const emoji = document.getElementById('cf-emoji').value.trim() || '🎬';
+    const descripcion = document.getElementById('cf-descripcion').value.trim();
+    const activa = document.getElementById('cf-activa').checked;
+
+    if (!nombre) { showToast('⚠️ Ponle nombre a la colección'); return; }
+
+    try {
+      if (editingColeccionId === null) {
+        const id = slugify(nombre);
+        if (!id) { showToast('⚠️ Nombre inválido'); return; }
+        const existing = _colecciones.find(c => c.id === id);
+        if (existing) {
+          showToast('⚠️ Ya existe una colección con ese nombre. Edítala desde la lista.');
+          return;
+        }
+        const { error } = await sbClient.from('catalogo_colecciones').insert({
+          id, nombre, emoji, descripcion, banner_url: currentColeccionBanner, activa
+        });
+        if (error) throw error;
+        showToast('✅ Colección creada');
+      } else {
+        const { error } = await sbClient.from('catalogo_colecciones')
+          .update({ nombre, emoji, descripcion, banner_url: currentColeccionBanner, activa })
+          .eq('id', editingColeccionId);
+        if (error) throw error;
+        showToast('✅ Colección actualizada');
+      }
+      closeColeccionModal();
+      await loadColecciones();
+    } catch (err) {
+      showToast(`❌ Error: ${err.message}`);
+    }
+  }
+  window.saveColeccion = saveColeccion;
 
   async function deleteColeccion(id) {
     try {
@@ -1226,7 +1352,6 @@
     }
   }
   window.deleteColeccion = deleteColeccion;
-  window.addColeccion = addColeccion;
 
   function renderColeccionList() {
     const el = document.getElementById('coleccion-list');
@@ -1236,9 +1361,10 @@
       return;
     }
     el.innerHTML = _colecciones.map(c => `
-      <div class="admin-swatch">
-        <span>${c.emoji || '🎬'} ${esc(c.nombre)}</span>
-        <span class="admin-swatch-remove" onclick="deleteColeccion('${c.id}')">✕</span>
+      <div class="admin-swatch" style="${c.activa === false ? 'opacity:.55' : ''}">
+        <span>${c.emoji || '🎬'} ${esc(c.nombre)}${c.activa === false ? ' · oculta' : ''}</span>
+        <span class="admin-swatch-remove" style="cursor:pointer" onclick="openColeccionModal('${c.id}')" title="Editar">✏️</span>
+        <span class="admin-swatch-remove" onclick="deleteColeccion('${c.id}')" title="Eliminar">✕</span>
       </div>
     `).join('');
   }

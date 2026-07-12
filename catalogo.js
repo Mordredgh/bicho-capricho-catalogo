@@ -90,7 +90,7 @@ async function loadProducts() {
       const [categories, rows, colecciones] = await Promise.all([
         supaGet('categories', 'select=id,name,emoji,color&order=name'),
         supaGet('catalogo_productos', 'select=*&activo=eq.true&order=created_at.desc'),
-        supaGet('catalogo_colecciones', 'select=id,nombre,emoji&order=nombre').catch(() => [])
+        supaGet('catalogo_colecciones', 'select=id,nombre,emoji,descripcion,banner_url&order=nombre').catch(() => [])
       ]);
 
       categories.forEach(cat => {
@@ -122,12 +122,14 @@ async function loadProducts() {
       const coleccionesConProductos = colecciones.filter(c =>
         allProducts.some(p => p.coleccion === c.id)
       );
+      _coleccionesData = coleccionesConProductos;
       renderColeccionFilterButtons(coleccionesConProductos);
 
       filteredProducts = [...allProducts];
       renderCatalog();
       injectProductSchema(allProducts);
       if (typeof calibrateSlider === 'function') calibrateSlider();
+      applyColeccionFromUrl();
       return;
     } catch (e) {
       console.warn('Supabase no disponible, usando defaults:', e.message);
@@ -411,15 +413,56 @@ function renderFilterButtons(categories) {
 
 // ── FILTRO DE COLECCIONES ──
 const coleccionFilterContainer = document.getElementById('colecciones-filters');
+const coleccionBannerEl = document.getElementById('coleccion-banner');
+let _coleccionesData = [];
+
 if (coleccionFilterContainer) {
   coleccionFilterContainer.addEventListener('click', (e) => {
     const btn = e.target.closest('.filter');
     if (!btn) return;
-    coleccionFilterContainer.querySelectorAll('.filter').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentColeccion = btn.dataset.coleccion;
-    applyFiltersAndSearch();
+    setColeccionActiva(btn.dataset.coleccion);
   });
+}
+
+function setColeccionActiva(id) {
+  currentColeccion = id;
+  if (coleccionFilterContainer) {
+    coleccionFilterContainer.querySelectorAll('.filter').forEach(b => {
+      b.classList.toggle('active', b.dataset.coleccion === id);
+    });
+  }
+  renderColeccionBanner(id);
+  applyFiltersAndSearch();
+}
+
+function renderColeccionBanner(id) {
+  if (!coleccionBannerEl) return;
+  const c = id !== 'todas' ? _coleccionesData.find(x => x.id === id) : null;
+  if (!c || (!c.descripcion && !c.banner_url)) {
+    coleccionBannerEl.style.display = 'none';
+    coleccionBannerEl.innerHTML = '';
+    return;
+  }
+  coleccionBannerEl.style.display = '';
+  coleccionBannerEl.innerHTML = `
+    ${c.banner_url ? `<img src="${c.banner_url}" alt="${esc(c.nombre)}" loading="lazy" style="width:100%;max-height:260px;object-fit:cover;border-radius:20px;margin-bottom:14px;">` : ''}
+    <div style="text-align:center;margin-bottom:18px;">
+      <strong style="font-family:'Fredoka',sans-serif;font-size:20px;">${c.emoji || '🎬'} ${esc(c.nombre)}</strong>
+      ${c.descripcion ? `<p style="margin-top:6px;color:var(--olive);max-width:560px;margin-left:auto;margin-right:auto;">${esc(c.descripcion)}</p>` : ''}
+    </div>
+  `;
+}
+
+// Permite compartir un link directo a una colección: ?coleccion=mario-movie
+function applyColeccionFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const target = params.get('coleccion');
+  if (!target) return;
+  const exists = _coleccionesData.some(c => c.id === target);
+  if (!exists) return;
+  setColeccionActiva(target);
+  const catalogSection = document.getElementById('catalogo');
+  if (catalogSection) catalogSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function renderColeccionFilterButtons(colecciones) {
