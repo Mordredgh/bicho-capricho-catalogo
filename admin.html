@@ -769,7 +769,18 @@
         </div>
         <button type="button" class="btn-save-sm" onclick="addMockup()">+ Agregar mockup</button>
       </div>
-      <div id="mockup-list" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;"></div>
+      <details style="margin-top:14px;">
+        <summary style="cursor:pointer; font-weight:700; color:var(--forest); font-size:13px;">Ver mockups ya cargados (<span id="mockup-count">0</span>)</summary>
+        <div id="mockup-list" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;"></div>
+      </details>
+    </div>
+
+    <!-- Gestor de diseños: subida tipo Redbubble, editor individual por diseño -->
+    <div class="config-box">
+      <h3>🎨 Diseños de playera</h3>
+      <p>Sube uno o varios PNG transparentes. Cada diseño trae su propio editor visual (arrastra para mover, arrastra la esquina para escalar), su propio set de colores/mockups y su propia colección. Genera hasta 4 productos por diseño (Hombre/Mujer/Juvenil/Niños).</p>
+      <input type="file" id="design-upload-input" accept="image/png" multiple>
+      <div id="design-manager-list" style="margin-top:16px; display:flex; flex-direction:column; gap:18px;"></div>
     </div>
 
     <!-- Tabla de productos -->
@@ -970,26 +981,6 @@
               <input type="file" id="cf-banner" accept="image/png, image/jpeg, image/webp">
               <div class="preview-container" id="cf-banner-preview"></div>
             </div>
-          </div>
-          <div class="form-group full" id="cf-disenos-section" style="border-top:2px dashed var(--forest); padding-top:16px; margin-top:8px; display:none;">
-            <label>🎨 Diseños de esta colección</label>
-            <p style="font-size:11px; color:var(--olive); margin-bottom:8px;">Sube varios PNG transparentes a la vez. Cada diseño genera automáticamente 4 productos (Hombre, Mujer, Juvenil, Niños), cada uno con todos los colores de mockup disponibles para ese corte — sin swatches repetidos.</p>
-            <input type="file" id="cf-disenos" accept="image/png" multiple>
-            <div style="display:flex; gap:20px; align-items:flex-start; margin-top:12px; flex-wrap:wrap;">
-              <div>
-                <label style="font-size:12px; display:block; margin-bottom:6px;">Vista previa (arrastra el diseño para moverlo, arrastra la esquina 🔵 para cambiar tamaño)</label>
-                <select id="cf-preview-mockup" style="margin-bottom:8px; font-size:12px;"></select>
-                <div style="border:2px dashed var(--forest); border-radius:10px; padding:6px; width:fit-content; background:#fff;">
-                  <canvas id="cf-preview-canvas" width="260" height="320" style="display:block; cursor:move; touch-action:none;"></canvas>
-                </div>
-                <p style="font-size:11px; color:var(--olive); margin-top:6px;">Tamaño: <span id="cf-preview-scale-txt">55%</span> · Posición: <span id="cf-preview-offset-txt">22%</span></p>
-              </div>
-              <div>
-                <button type="button" class="btn-primary" style="padding:8px 16px;margin:0;box-shadow:2px 3px 0 var(--forest);" onclick="generateColeccionProductos()">✨ Generar productos (4 por diseño)</button>
-                <p style="font-size:11px; color:var(--olive); margin-top:8px; max-width:200px;">El ajuste de tamaño/posición se aplica igual a todos los diseños subidos y a los 4 cortes.</p>
-              </div>
-            </div>
-            <div id="coleccion-diseno-progress" style="font-size:12px;color:var(--olive);margin-top:10px;"></div>
           </div>
         </div>
         <div class="form-actions">
@@ -1244,14 +1235,6 @@
     document.getElementById('cf-banner-preview').innerHTML = '';
     document.getElementById('coleccion-modal-title').textContent = id === null ? 'Nueva colección' : 'Editar colección';
     document.getElementById('coleccion-modal-save-btn').textContent = id === null ? 'Guardar colección ✦' : 'Actualizar colección ✦';
-    document.getElementById('cf-disenos-section').style.display = id === null ? 'none' : '';
-    document.getElementById('coleccion-diseno-progress').textContent = '';
-    if (id !== null) {
-      cfPreviewState.scale = 0.55;
-      cfPreviewState.offsetY = 0.22;
-      cfPreviewState.designImg = null;
-      renderCfPreviewMockupSelect();
-    }
 
     if (id !== null) {
       const c = _colecciones.find(x => x.id === id);
@@ -1354,220 +1337,299 @@
   }
   window.saveColeccion = saveColeccion;
 
-  // Genera 4 productos por diseño (Hombre/Mujer/Juvenil/Niños), cada uno con
-  // los swatches de color propios de ese corte — evita puntos de color
-  // duplicados que pasarían si un solo producto mezclara los 4 cortes.
-  async function generateColeccionProductos() {
-    if (editingColeccionId === null) { showToast('⚠️ Guarda la colección primero, luego edítala para subir diseños'); return; }
-    const files = Array.from(document.getElementById('cf-disenos').files);
-    if (!files.length) { showToast('⚠️ Sube al menos un diseño PNG'); return; }
-    if (!_mockups.length) { showToast('⚠️ No hay mockups de playera cargados todavía'); return; }
+  // ─────────────────────────────────────────────────────────────
+  // Gestor de diseños (estilo Redbubble): sube varios PNG, cada uno
+  // con su propio editor visual arrastrable, su propio checklist de
+  // mockups/colores (agrupado por corte, para no romper el anti-
+  // duplicado de swatches) y su propia colección de destino.
+  // ─────────────────────────────────────────────────────────────
+  const CORTES = ['Hombre', 'Mujer', 'Juvenil', 'Niños'];
+  let _pendingDesigns = [];
 
-    const scale = cfPreviewState.scale;
-    const offsetY = cfPreviewState.offsetY;
-    const progressEl = document.getElementById('coleccion-diseno-progress');
-    const cuts = ['Hombre', 'Mujer', 'Juvenil', 'Niños'];
-    let totalCreados = 0;
+  function mockupsPorCorte() {
+    const grupos = {};
+    CORTES.forEach(c => { grupos[c] = _mockups.filter(m => m.nombre.startsWith(c + ' - ')); });
+    return grupos;
+  }
 
+  async function onDesignFilesSelected(fileList) {
+    const files = Array.from(fileList);
     for (const file of files) {
-      let designImg;
-      try {
-        designImg = await loadImageFromFile(file);
-      } catch (e) {
-        showToast(`❌ No se pudo leer ${file.name}`);
-        continue;
-      }
+      let img;
+      try { img = await loadImageFromFile(file); } catch (e) { showToast(`❌ No se pudo leer ${file.name}`); continue; }
       const baseName = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim();
       const displayName = baseName.replace(/\b\w/g, c => c.toUpperCase()) || 'Diseño';
-
-      for (const cut of cuts) {
-        const mockupsDelCorte = _mockups.filter(m => m.nombre.startsWith(cut + ' - '));
-        if (!mockupsDelCorte.length) continue;
-
-        progressEl.textContent = `Generando "${displayName} - ${cut}" (${mockupsDelCorte.length} colores)...`;
-
-        const results = [];
-        for (const mockup of mockupsDelCorte) {
-          try {
-            const mockupImg = await loadImageFromUrl(mockup.foto_url);
-            const canvas = document.createElement('canvas');
-            canvas.width = mockupImg.naturalWidth;
-            canvas.height = mockupImg.naturalHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(mockupImg, 0, 0);
-            const dW = canvas.width * scale;
-            const dH = dW * (designImg.naturalHeight / designImg.naturalWidth);
-            const dX = (canvas.width - dW) / 2;
-            const dY = canvas.height * offsetY;
-            ctx.drawImage(designImg, dX, dY, dW, dH);
-            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', 0.9));
-            const safeName = mockup.nombre.replace(/[^a-z0-9]/gi, '-').toLowerCase();
-            const path = `productos/${Date.now()}-${safeName}.webp`;
-            const url = await supaUploadAuth(path, blob);
-            results.push({ url, hex: mockup.color_hex });
-          } catch (e) {
-            console.warn(`Fallo mockup ${mockup.nombre}:`, e.message);
-          }
-        }
-
-        if (!results.length) continue;
-
-        const row = {
-          id: crypto.randomUUID(),
-          nombre: `${displayName} - ${cut}`,
-          cat: 'textil',
-          precio: 'Consultar',
-          descripcion: `Diseño ${displayName}, corte ${cut}.`,
-          badge: '',
-          badge_pos: 'top-left',
-          color_representativo: 'lilac',
-          colores: results.map(r => r.hex),
-          foto: results[0].url,
-          galeria: JSON.stringify(results.slice(1).map(r => r.url)),
-          size_guide: 'playera',
-          free_shipping: false,
-          mock_class: 'tshirt',
-          coleccion: editingColeccionId,
-          activo: true
-        };
-
-        try {
-          const { error } = await sbClient.from('catalogo_productos').insert(row);
-          if (error) throw error;
-          totalCreados++;
-        } catch (e) {
-          showToast(`❌ Error guardando "${row.nombre}": ${e.message}`);
-        }
-      }
+      const selectedMockupIds = new Set(_mockups.map(m => m.id));
+      _pendingDesigns.push({
+        localId: crypto.randomUUID(),
+        name: displayName,
+        img,
+        scale: 0.55,
+        offsetY: 0.22,
+        previewMockupId: _mockups.length ? _mockups[0].id : null,
+        previewMockupImg: null,
+        selectedMockupIds,
+        coleccionId: '',
+        mode: null,
+        dragStartY: 0,
+        dragStartOffsetY: 0
+      });
     }
-
-    document.getElementById('cf-disenos').value = '';
-    progressEl.textContent = '';
-    showToast(`✅ ${totalCreados} productos creados. Precio queda en "Consultar" — edítalos para poner el precio real.`);
-    await renderTable();
-  }
-  window.generateColeccionProductos = generateColeccionProductos;
-
-  // Vista previa visual tipo Redbubble: mockup + diseño superpuesto,
-  // arrastrable/redimensionable. Alimenta el mismo scale/offsetY que
-  // antes venían de sliders ciegos.
-  const cfPreviewState = { scale: 0.55, offsetY: 0.22, designImg: null, mockupImg: null, mode: null, dragStartY: 0, dragStartOffsetY: 0 };
-
-  function renderCfPreviewMockupSelect() {
-    const sel = document.getElementById('cf-preview-mockup');
-    sel.innerHTML = _mockups.map(m => `<option value="${m.id}">${esc(m.nombre)}</option>`).join('');
-    if (_mockups.length) loadCfPreviewMockup(_mockups[0].id);
+    document.getElementById('design-upload-input').value = '';
+    renderDesignManager();
   }
 
-  async function loadCfPreviewMockup(mockupId) {
-    const m = _mockups.find(x => x.id === mockupId || String(x.id) === String(mockupId));
+  function removePendingDesign(localId) {
+    _pendingDesigns = _pendingDesigns.filter(d => d.localId !== localId);
+    renderDesignManager();
+  }
+  window.removePendingDesign = removePendingDesign;
+
+  function toggleDesignMockup(localId, mockupId, checked) {
+    const d = _pendingDesigns.find(x => x.localId === localId);
+    if (!d) return;
+    if (checked) d.selectedMockupIds.add(mockupId); else d.selectedMockupIds.delete(mockupId);
+  }
+  window.toggleDesignMockup = toggleDesignMockup;
+
+  function setDesignColeccion(localId, coleccionId) {
+    const d = _pendingDesigns.find(x => x.localId === localId);
+    if (d) d.coleccionId = coleccionId;
+  }
+  window.setDesignColeccion = setDesignColeccion;
+
+  async function setDesignPreviewMockup(localId, mockupId) {
+    const d = _pendingDesigns.find(x => x.localId === localId);
+    if (!d) return;
+    d.previewMockupId = mockupId;
+    const m = _mockups.find(x => x.id === mockupId);
     if (!m) return;
-    try {
-      cfPreviewState.mockupImg = await loadImageFromUrl(m.foto_url);
-      drawCfPreview();
-    } catch (e) { console.warn('No se pudo cargar mockup de preview:', e.message); }
+    try { d.previewMockupImg = await loadImageFromUrl(m.foto_url); } catch (e) { /* ignora */ }
+    drawDesignCanvas(localId);
   }
+  window.setDesignPreviewMockup = setDesignPreviewMockup;
 
-  async function loadCfPreviewDesign(file) {
-    try {
-      cfPreviewState.designImg = await loadImageFromFile(file);
-      drawCfPreview();
-    } catch (e) { showToast(`❌ No se pudo leer ${file.name}`); }
-  }
-
-  function cfDesignBounds() {
-    const canvas = document.getElementById('cf-preview-canvas');
-    const dW = canvas.width * cfPreviewState.scale;
-    const design = cfPreviewState.designImg;
-    const dH = design ? dW * (design.naturalHeight / design.naturalWidth) : dW;
+  function designBounds(d, canvas) {
+    const dW = canvas.width * d.scale;
+    const dH = dW * (d.img.naturalHeight / d.img.naturalWidth);
     const dX = (canvas.width - dW) / 2;
-    const dY = canvas.height * cfPreviewState.offsetY;
+    const dY = canvas.height * d.offsetY;
     return { dX, dY, dW, dH };
   }
 
-  function drawCfPreview() {
-    const canvas = document.getElementById('cf-preview-canvas');
+  function drawDesignCanvas(localId) {
+    const d = _pendingDesigns.find(x => x.localId === localId);
+    const canvas = document.getElementById(`design-canvas-${localId}`);
+    if (!d || !canvas) return;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (cfPreviewState.mockupImg) {
-      ctx.drawImage(cfPreviewState.mockupImg, 0, 0, canvas.width, canvas.height);
+    if (d.previewMockupImg) {
+      ctx.drawImage(d.previewMockupImg, 0, 0, canvas.width, canvas.height);
     } else {
       ctx.fillStyle = '#f0ede4';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
-    if (cfPreviewState.designImg) {
-      const { dX, dY, dW, dH } = cfDesignBounds();
-      ctx.drawImage(cfPreviewState.designImg, dX, dY, dW, dH);
-      ctx.strokeStyle = 'rgba(90,60,150,0.6)';
-      ctx.setLineDash([4, 3]);
-      ctx.strokeRect(dX, dY, dW, dH);
-      ctx.setLineDash([]);
-      ctx.fillStyle = '#5a3c96';
-      ctx.beginPath();
-      ctx.arc(dX + dW, dY + dH, 7, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    document.getElementById('cf-preview-scale-txt').textContent = Math.round(cfPreviewState.scale * 100) + '%';
-    document.getElementById('cf-preview-offset-txt').textContent = Math.round(cfPreviewState.offsetY * 100) + '%';
+    const { dX, dY, dW, dH } = designBounds(d, canvas);
+    ctx.drawImage(d.img, dX, dY, dW, dH);
+    ctx.strokeStyle = 'rgba(90,60,150,0.6)';
+    ctx.setLineDash([4, 3]);
+    ctx.strokeRect(dX, dY, dW, dH);
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#5a3c96';
+    ctx.beginPath();
+    ctx.arc(dX + dW, dY + dH, 7, 0, Math.PI * 2);
+    ctx.fill();
+    const scaleTxt = document.getElementById(`design-scale-txt-${localId}`);
+    const offsetTxt = document.getElementById(`design-offset-txt-${localId}`);
+    if (scaleTxt) scaleTxt.textContent = Math.round(d.scale * 100) + '%';
+    if (offsetTxt) offsetTxt.textContent = Math.round(d.offsetY * 100) + '%';
   }
 
-  function cfCanvasPoint(e) {
-    const canvas = document.getElementById('cf-preview-canvas');
+  function canvasPoint(canvas, e) {
     const rect = canvas.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     return { x: (clientX - rect.left) * (canvas.width / rect.width), y: (clientY - rect.top) * (canvas.height / rect.height) };
   }
 
-  function cfPreviewPointerDown(e) {
-    if (!cfPreviewState.designImg) return;
-    const p = cfCanvasPoint(e);
-    const { dX, dY, dW, dH } = cfDesignBounds();
-    const handleX = dX + dW, handleY = dY + dH;
-    if (Math.hypot(p.x - handleX, p.y - handleY) < 14) {
-      cfPreviewState.mode = 'resize';
-    } else if (p.x >= dX && p.x <= dX + dW && p.y >= dY && p.y <= dY + dH) {
-      cfPreviewState.mode = 'drag';
-      cfPreviewState.dragStartY = p.y;
-      cfPreviewState.dragStartOffsetY = cfPreviewState.offsetY;
-    } else {
-      return;
-    }
-    e.preventDefault();
+  function bindDesignCanvasEvents(localId) {
+    const canvas = document.getElementById(`design-canvas-${localId}`);
+    if (!canvas) return;
+    const onDown = (e) => {
+      const d = _pendingDesigns.find(x => x.localId === localId);
+      if (!d) return;
+      const p = canvasPoint(canvas, e);
+      const { dX, dY, dW, dH } = designBounds(d, canvas);
+      const handleX = dX + dW, handleY = dY + dH;
+      if (Math.hypot(p.x - handleX, p.y - handleY) < 14) {
+        d.mode = 'resize';
+      } else if (p.x >= dX && p.x <= dX + dW && p.y >= dY && p.y <= dY + dH) {
+        d.mode = 'drag';
+        d.dragStartY = p.y;
+        d.dragStartOffsetY = d.offsetY;
+      } else {
+        return;
+      }
+      e.preventDefault();
+    };
+    const onMove = (e) => {
+      const d = _pendingDesigns.find(x => x.localId === localId);
+      if (!d || !d.mode) return;
+      const p = canvasPoint(canvas, e);
+      if (d.mode === 'drag') {
+        const deltaY = (p.y - d.dragStartY) / canvas.height;
+        d.offsetY = Math.min(0.7, Math.max(0, d.dragStartOffsetY + deltaY));
+      } else if (d.mode === 'resize') {
+        const newDW = Math.abs(p.x - canvas.width / 2) * 2;
+        d.scale = Math.min(1, Math.max(0.15, newDW / canvas.width));
+      }
+      drawDesignCanvas(localId);
+      e.preventDefault();
+    };
+    const onUp = () => {
+      const d = _pendingDesigns.find(x => x.localId === localId);
+      if (d) d.mode = null;
+    };
+    canvas.addEventListener('mousedown', onDown);
+    canvas.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    canvas.addEventListener('touchstart', onDown, { passive: false });
+    canvas.addEventListener('touchmove', onMove, { passive: false });
+    canvas.addEventListener('touchend', onUp);
   }
 
-  function cfPreviewPointerMove(e) {
-    if (!cfPreviewState.mode) return;
-    const canvas = document.getElementById('cf-preview-canvas');
-    const p = cfCanvasPoint(e);
-    if (cfPreviewState.mode === 'drag') {
-      const deltaY = (p.y - cfPreviewState.dragStartY) / canvas.height;
-      cfPreviewState.offsetY = Math.min(0.7, Math.max(0, cfPreviewState.dragStartOffsetY + deltaY));
-    } else if (cfPreviewState.mode === 'resize') {
-      const newDW = Math.abs(p.x - canvas.width / 2) * 2;
-      cfPreviewState.scale = Math.min(1, Math.max(0.15, newDW / canvas.width));
-    }
-    drawCfPreview();
-    e.preventDefault();
-  }
+  function renderDesignManager() {
+    const container = document.getElementById('design-manager-list');
+    if (!container) return;
+    if (!_pendingDesigns.length) { container.innerHTML = ''; return; }
+    const grupos = mockupsPorCorte();
+    container.innerHTML = _pendingDesigns.map(d => `
+      <div class="config-box" style="background:#fff;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <strong>${esc(d.name)}</strong>
+          <span class="admin-swatch-remove" style="cursor:pointer" onclick="removePendingDesign('${d.localId}')" title="Quitar">✕ Quitar</span>
+        </div>
+        <div style="display:flex; gap:20px; flex-wrap:wrap;">
+          <div>
+            <label style="font-size:12px; display:block; margin-bottom:6px;">Arrastra para mover, arrastra la esquina 🔵 para escalar</label>
+            <select style="margin-bottom:8px; font-size:12px;" onchange="setDesignPreviewMockup('${d.localId}', this.value)">
+              ${_mockups.map(m => `<option value="${m.id}" ${m.id === d.previewMockupId ? 'selected' : ''}>${esc(m.nombre)}</option>`).join('')}
+            </select>
+            <div style="border:2px dashed var(--forest); border-radius:10px; padding:6px; width:fit-content; background:#fff;">
+              <canvas id="design-canvas-${d.localId}" width="220" height="270" style="display:block; cursor:move; touch-action:none;"></canvas>
+            </div>
+            <p style="font-size:11px; color:var(--olive); margin-top:6px;">Tamaño: <span id="design-scale-txt-${d.localId}">55%</span> · Posición: <span id="design-offset-txt-${d.localId}">22%</span></p>
+          </div>
+          <div style="flex:1; min-width:220px;">
+            <label style="font-size:12px; display:block; margin-bottom:4px;">Colección</label>
+            <select onchange="setDesignColeccion('${d.localId}', this.value)" style="width:100%; margin-bottom:12px;">
+              <option value="">Sin colección (producto normal)</option>
+              ${_colecciones.map(c => `<option value="${c.id}" ${c.id === d.coleccionId ? 'selected' : ''}>${esc(c.emoji || '')} ${esc(c.nombre)}</option>`).join('')}
+            </select>
+            <label style="font-size:12px; display:block; margin-bottom:4px;">Colores/mockups a generar (agrupado por corte)</label>
+            <div style="max-height:160px; overflow-y:auto; border:1px solid var(--forest); border-radius:8px; padding:8px;">
+              ${CORTES.map(cut => `
+                <div style="margin-bottom:6px;">
+                  <strong style="font-size:11px;">${cut}</strong><br>
+                  ${grupos[cut].map(m => `
+                    <label style="display:inline-flex; align-items:center; gap:4px; margin:2px 8px 2px 0; font-size:11px;">
+                      <input type="checkbox" ${d.selectedMockupIds.has(m.id) ? 'checked' : ''} onchange="toggleDesignMockup('${d.localId}', '${m.id}', this.checked)">
+                      <span style="width:12px;height:12px;border-radius:50%;background:${m.color_hex};display:inline-block;border:1px solid #ccc;"></span>
+                      ${esc(m.nombre.replace(cut + ' - ', ''))}
+                    </label>
+                  `).join('') || '<span style="font-size:11px;color:var(--olive)">Sin mockups para este corte</span>'}
+                </div>
+              `).join('')}
+            </div>
+            <button type="button" class="btn-primary" style="padding:8px 16px;margin-top:12px;box-shadow:2px 3px 0 var(--forest);" onclick="generateProductsForDesign('${d.localId}')">✨ Generar productos</button>
+          </div>
+        </div>
+        <div id="design-progress-${d.localId}" style="font-size:12px;color:var(--olive);margin-top:10px;"></div>
+      </div>
+    `).join('');
 
-  function cfPreviewPointerUp() { cfPreviewState.mode = null; }
-
-  function initCfPreviewCanvas() {
-    const canvas = document.getElementById('cf-preview-canvas');
-    canvas.addEventListener('mousedown', cfPreviewPointerDown);
-    canvas.addEventListener('mousemove', cfPreviewPointerMove);
-    window.addEventListener('mouseup', cfPreviewPointerUp);
-    canvas.addEventListener('touchstart', cfPreviewPointerDown, { passive: false });
-    canvas.addEventListener('touchmove', cfPreviewPointerMove, { passive: false });
-    canvas.addEventListener('touchend', cfPreviewPointerUp);
-    document.getElementById('cf-preview-mockup').addEventListener('change', (e) => loadCfPreviewMockup(e.target.value));
-    document.getElementById('cf-disenos').addEventListener('change', (e) => {
-      if (e.target.files[0]) loadCfPreviewDesign(e.target.files[0]);
+    _pendingDesigns.forEach(d => {
+      if (!d.previewMockupImg && d.previewMockupId) setDesignPreviewMockup(d.localId, d.previewMockupId);
+      else drawDesignCanvas(d.localId);
+      bindDesignCanvasEvents(d.localId);
     });
-    drawCfPreview();
   }
-  document.addEventListener('DOMContentLoaded', initCfPreviewCanvas);
+
+  async function generateProductsForDesign(localId) {
+    const d = _pendingDesigns.find(x => x.localId === localId);
+    if (!d) return;
+    const progressEl = document.getElementById(`design-progress-${localId}`);
+    let totalCreados = 0;
+
+    for (const cut of CORTES) {
+      const mockupsDelCorte = _mockups.filter(m => m.nombre.startsWith(cut + ' - ') && d.selectedMockupIds.has(m.id));
+      if (!mockupsDelCorte.length) continue;
+      if (progressEl) progressEl.textContent = `Generando "${d.name} - ${cut}" (${mockupsDelCorte.length} colores)...`;
+
+      const results = [];
+      for (const mockup of mockupsDelCorte) {
+        try {
+          const mockupImg = await loadImageFromUrl(mockup.foto_url);
+          const canvas = document.createElement('canvas');
+          canvas.width = mockupImg.naturalWidth;
+          canvas.height = mockupImg.naturalHeight;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(mockupImg, 0, 0);
+          const dW = canvas.width * d.scale;
+          const dH = dW * (d.img.naturalHeight / d.img.naturalWidth);
+          const dX = (canvas.width - dW) / 2;
+          const dY = canvas.height * d.offsetY;
+          ctx.drawImage(d.img, dX, dY, dW, dH);
+          const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', 0.9));
+          const safeName = mockup.nombre.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+          const path = `productos/${Date.now()}-${safeName}.webp`;
+          const url = await supaUploadAuth(path, blob);
+          results.push({ url, hex: mockup.color_hex });
+        } catch (e) {
+          console.warn(`Fallo mockup ${mockup.nombre}:`, e.message);
+        }
+      }
+      if (!results.length) continue;
+
+      const row = {
+        id: crypto.randomUUID(),
+        nombre: `${d.name} - ${cut}`,
+        cat: 'textil',
+        precio: 'Consultar',
+        descripcion: `Diseño ${d.name}, corte ${cut}.`,
+        badge: '',
+        badge_pos: 'top-left',
+        color_representativo: 'lilac',
+        colores: results.map(r => r.hex),
+        foto: results[0].url,
+        galeria: JSON.stringify(results.slice(1).map(r => r.url)),
+        size_guide: 'playera',
+        free_shipping: false,
+        mock_class: 'tshirt',
+        coleccion: d.coleccionId || null,
+        activo: true
+      };
+
+      try {
+        const { error } = await sbClient.from('catalogo_productos').insert(row);
+        if (error) throw error;
+        totalCreados++;
+      } catch (e) {
+        showToast(`❌ Error guardando "${row.nombre}": ${e.message}`);
+      }
+    }
+
+    if (progressEl) progressEl.textContent = '';
+    showToast(`✅ ${totalCreados} producto(s) creado(s) para "${d.name}". Precio queda en "Consultar" — edítalos para poner el precio real.`);
+    removePendingDesign(localId);
+    await renderTable();
+  }
+  window.generateProductsForDesign = generateProductsForDesign;
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('design-upload-input');
+    if (input) input.addEventListener('change', (e) => onDesignFilesSelected(e.target.files));
+  });
 
   async function deleteColeccion(id) {
     try {
@@ -1655,6 +1717,8 @@
   function renderMockupList() {
     const el = document.getElementById('mockup-list');
     if (!el) return;
+    const countEl = document.getElementById('mockup-count');
+    if (countEl) countEl.textContent = _mockups.length;
     if (!_mockups.length) {
       el.innerHTML = '<p style="font-size:12px;color:var(--olive)">Sin mockups todavía. Sube tu primera playera lisa arriba.</p>';
       return;
