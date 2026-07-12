@@ -864,6 +864,13 @@
           <p>Categorías activas</p>
         </div>
       </div>
+      <div class="stat-card">
+        <div class="stat-icon">💾</div>
+        <div>
+          <h3 id="stat-storage">…</h3>
+          <p>Storage usado</p>
+        </div>
+      </div>
     </div>
 
     <div id="pending-chips" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:24px;"></div>
@@ -918,6 +925,8 @@
       <button class="btn-primary" style="background:var(--olive)" onclick="exportJSON()">⬇ Exportar JSON</button>
       <button class="btn-primary" style="background:var(--butter);color:var(--forest)" onclick="document.getElementById('import-input').click()">⬆ Importar JSON</button>
       <input type="file" id="import-input" accept=".json" style="display:none" onchange="importJSON(event)">
+      <button class="btn-primary" style="background:var(--grape)" onclick="exportFullBackup()">📦 Respaldo completo</button>
+      <a class="btn-primary" style="background:var(--forest); text-decoration:none; display:inline-flex; align-items:center;" href="https://catalogo.manekistore.com.mx/" target="_blank" rel="noopener noreferrer">👁 Ver catálogo público</a>
     </div>
 
     <!-- Gestor de diseños: subida tipo Redbubble, editor individual por diseño -->
@@ -1235,6 +1244,38 @@
     loadColecciones();
     loadMockups();
     renderTable().catch(e => console.error('renderTable:', e));
+    loadStorageUsage();
+  }
+
+  async function getStorageUsageRecursive(prefix = '') {
+    const { data, error } = await sbClient.storage.from('bc-catalogo').list(prefix, { limit: 1000 });
+    if (error || !data) return { count: 0, bytes: 0 };
+    let count = 0, bytes = 0;
+    for (const item of data) {
+      if (item.id === null) {
+        const sub = await getStorageUsageRecursive(prefix ? `${prefix}/${item.name}` : item.name);
+        count += sub.count;
+        bytes += sub.bytes;
+      } else {
+        count++;
+        bytes += (item.metadata && item.metadata.size) || 0;
+      }
+    }
+    return { count, bytes };
+  }
+
+  async function loadStorageUsage() {
+    const el = document.getElementById('stat-storage');
+    if (!el) return;
+    try {
+      const { count, bytes } = await getStorageUsageRecursive('');
+      const mb = bytes / (1024 * 1024);
+      el.textContent = `${mb.toFixed(1)} MB`;
+      el.title = `${count} archivos en el bucket bc-catalogo`;
+    } catch (e) {
+      el.textContent = '—';
+      console.warn('No se pudo calcular storage:', e.message);
+    }
   }
 
   async function checkSession() {
@@ -2657,6 +2698,25 @@
     } catch (err) { showToast(`❌ Error al exportar: ${err.message}`); }
   }
 
+  async function exportFullBackup() {
+    try {
+      const backup = {
+        products: getProducts(),
+        colecciones: _colecciones,
+        mockups: _mockups,
+        wa: localStorage.getItem(WA_KEY) || '',
+        exportedAt: new Date().toISOString()
+      };
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `bicho-capricho-respaldo-completo-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      showToast('📦 Respaldo completo descargado (productos + colecciones + mockups)');
+    } catch (err) { showToast(`❌ Error al exportar: ${err.message}`); }
+  }
+  window.exportFullBackup = exportFullBackup;
+
   function importJSON(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -2671,8 +2731,18 @@
             await supaAdmin('POST', 'catalogo_productos', row);
           }
         }
+        if (data.colecciones && Array.isArray(data.colecciones)) {
+          const { error } = await sbClient.from('catalogo_colecciones').upsert(data.colecciones);
+          if (error) console.warn('Error restaurando colecciones:', error.message);
+        }
+        if (data.mockups && Array.isArray(data.mockups)) {
+          const { error } = await sbClient.from('catalogo_mockups').upsert(data.mockups);
+          if (error) console.warn('Error restaurando mockups:', error.message);
+        }
         if (data.wa) localStorage.setItem(WA_KEY, data.wa);
         await renderTable();
+        await loadColecciones();
+        await loadMockups();
         loadWA();
         showToast('⬆ Importación completada');
       } catch (err) { showToast(`⚠️ Error al importar: ${err.message}`); }
