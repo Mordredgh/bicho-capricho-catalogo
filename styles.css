@@ -480,14 +480,16 @@ footer{background:var(--forest);color:var(--cream);padding:80px 0 25px}.footer-m
 .pm-guarantee strong { display: block; font-family: 'Fredoka', sans-serif; font-size: 16px; color: var(--forest); margin-bottom: 4px; }
 .pm-guarantee p { margin: 0; font-size: 13px; color: var(--olive); }
 .pm-price-row {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 14px;
   border-top: 2px solid var(--forest); padding-top: 20px; margin-top: auto;
 }
 .pm-price { font-size: 32px; font-family: 'Fredoka', sans-serif; color: var(--grape); }
 .pm-wa-btn {
   background: var(--forest); color: var(--white);
-  padding: 14px 24px; border-radius: 14px; font-weight: 900; font-size: 16px;
-  display: inline-flex; align-items: center; gap: 10px;
+  padding: 13px 18px; border-radius: 14px; font-weight: 900; font-size: 14px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  white-space: nowrap;
   box-shadow: 4px 5px 0 var(--lime); transition: .2s; border: 2px solid transparent;
 }
 .pm-wa-btn:hover { transform: translate(-2px, -2px); box-shadow: 6px 7px 0 var(--lime); }
@@ -1645,18 +1647,20 @@ footer{background:var(--forest);color:var(--cream);padding:80px 0 25px}.footer-m
 /* Agrupamiento de Botones en el Modal del Producto */
 .pm-actions-group {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
+  width: 100%;
 }
 .pm-add-list-btn {
   background: var(--butter);
   color: var(--forest);
   border: 2px solid var(--forest);
   border-radius: 14px;
-  padding: 14px 20px;
+  padding: 13px 18px;
   font-family: 'Fredoka', sans-serif;
   font-weight: 900;
-  font-size: 15px;
+  font-size: 14px;
+  white-space: nowrap;
   cursor: pointer;
   box-shadow: 4px 4px 0 var(--forest);
   transition: all 0.2s;
@@ -1664,6 +1668,11 @@ footer{background:var(--forest);color:var(--cream);padding:80px 0 25px}.footer-m
 .pm-add-list-btn:hover {
   transform: translateY(-2px);
   box-shadow: 5px 6px 0 var(--forest);
+}
+.pm-actions-group .pm-add-list-btn,
+.pm-actions-group .pm-wa-btn {
+  flex: 1;
+  text-align: center;
 }
 
 /* Ajustes Responsive Móvil */
