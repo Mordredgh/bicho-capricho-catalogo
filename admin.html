@@ -742,6 +742,24 @@
       </div>
     </div>
 
+    <!-- Colecciones -->
+    <div class="config-box">
+      <h3>🎬 Colecciones</h3>
+      <p>Crea la colección una vez (ej. "Mario Movie") y luego elígela en cada producto desde un menú — evita duplicados por escribirla distinto cada vez.</p>
+      <div class="config-row" style="flex-wrap:wrap; gap:14px; align-items:flex-end;">
+        <div class="form-group">
+          <label>Nombre</label>
+          <input type="text" id="coleccion-nombre" placeholder="Ej: Mario Movie" style="width:200px">
+        </div>
+        <div class="form-group">
+          <label>Emoji</label>
+          <input type="text" id="coleccion-emoji" placeholder="🎬" maxlength="4" style="width:60px;text-align:center">
+        </div>
+        <button type="button" class="btn-save-sm" onclick="addColeccion()">+ Agregar colección</button>
+      </div>
+      <div id="coleccion-list" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;"></div>
+    </div>
+
     <!-- Mockups de playeras reusables -->
     <div class="config-box">
       <h3>👕 Mockups de playeras (reusables)</h3>
@@ -840,8 +858,10 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Colección <small style="font-weight:400;color:#678d47">(opcional, ej: Mario Movie)</small></label>
-            <input type="text" id="f-coleccion" placeholder="Ej: Mario Movie">
+            <label>Colección <small style="font-weight:400;color:#678d47">(opcional)</small></label>
+            <select id="f-coleccion">
+              <option value="">Sin colección</option>
+            </select>
           </div>
           <div class="form-group">
             <label>Guía de Medidas / Capacidad</label>
@@ -1006,6 +1026,7 @@
     document.getElementById('admin-shell').style.display  = 'block';
     loadWA();
     loadCategoryOptions();
+    loadColecciones();
     loadMockups();
     renderTable().catch(e => console.error('renderTable:', e));
   }
@@ -1147,6 +1168,89 @@
   }
 
   function getProducts() { return _adminProducts.map(fromRow); }
+
+  // ── COLECCIONES (categorías reales, no texto libre) ────
+  let _colecciones = [];
+
+  function slugify(str) {
+    const accentRange = String.fromCharCode(0x0300) + '-' + String.fromCharCode(0x036f);
+    const accentRegex = new RegExp('[' + accentRange + ']', 'g');
+    return str.toLowerCase()
+      .normalize('NFD').replace(accentRegex, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+  }
+
+  async function loadColecciones() {
+    try {
+      const { data, error } = await sbClient.from('catalogo_colecciones').select('*').order('nombre');
+      if (error) throw error;
+      _colecciones = data || [];
+    } catch (e) {
+      console.warn('No se pudieron cargar colecciones:', e.message);
+      _colecciones = [];
+    }
+    renderColeccionList();
+    renderColeccionSelect();
+  }
+
+  async function addColeccion() {
+    const nombreInput = document.getElementById('coleccion-nombre');
+    const emojiInput = document.getElementById('coleccion-emoji');
+    const nombre = nombreInput.value.trim();
+    const emoji = emojiInput.value.trim() || '🎬';
+    if (!nombre) { showToast('⚠️ Ponle nombre a la colección'); return; }
+    const id = slugify(nombre);
+    if (!id) { showToast('⚠️ Nombre inválido'); return; }
+    try {
+      // upsert: si ya existe una colección con el mismo slug (ej. "Mario Movie"
+      // y "mario movie" caen en el mismo id), actualiza en vez de duplicar.
+      const { error } = await sbClient.from('catalogo_colecciones').upsert({ id, nombre, emoji });
+      if (error) throw error;
+      nombreInput.value = '';
+      emojiInput.value = '';
+      showToast('✅ Colección guardada');
+      await loadColecciones();
+    } catch (e) {
+      showToast(`❌ Error: ${e.message}`);
+    }
+  }
+
+  async function deleteColeccion(id) {
+    try {
+      const { error } = await sbClient.from('catalogo_colecciones').delete().eq('id', id);
+      if (error) throw error;
+      await loadColecciones();
+    } catch (e) {
+      showToast(`❌ Error al eliminar: ${e.message}`);
+    }
+  }
+  window.deleteColeccion = deleteColeccion;
+  window.addColeccion = addColeccion;
+
+  function renderColeccionList() {
+    const el = document.getElementById('coleccion-list');
+    if (!el) return;
+    if (!_colecciones.length) {
+      el.innerHTML = '<p style="font-size:12px;color:var(--olive)">Sin colecciones todavía.</p>';
+      return;
+    }
+    el.innerHTML = _colecciones.map(c => `
+      <div class="admin-swatch">
+        <span>${c.emoji || '🎬'} ${esc(c.nombre)}</span>
+        <span class="admin-swatch-remove" onclick="deleteColeccion('${c.id}')">✕</span>
+      </div>
+    `).join('');
+  }
+
+  function renderColeccionSelect() {
+    const sel = document.getElementById('f-coleccion');
+    if (!sel) return;
+    const current = sel.value;
+    sel.innerHTML = '<option value="">Sin colección</option>' +
+      _colecciones.map(c => `<option value="${c.id}">${c.emoji || '🎬'} ${esc(c.nombre)}</option>`).join('');
+    sel.value = current;
+  }
 
   // ── MOCKUPS DE PLAYERAS (librería reusable) ────────────
   let _mockups = [];

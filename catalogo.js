@@ -87,9 +87,10 @@ async function loadProducts() {
   // ── CATEGORÍAS DE SUPABASE (solo sincronizar labels, NO productos) ──
   if (typeof supaGet !== 'undefined') {
     try {
-      const [categories, rows] = await Promise.all([
+      const [categories, rows, colecciones] = await Promise.all([
         supaGet('categories', 'select=id,name,emoji,color&order=name'),
-        supaGet('catalogo_productos', 'select=*&activo=eq.true&order=created_at.desc')
+        supaGet('catalogo_productos', 'select=*&activo=eq.true&order=created_at.desc'),
+        supaGet('catalogo_colecciones', 'select=id,nombre,emoji&order=nombre').catch(() => [])
       ]);
 
       categories.forEach(cat => {
@@ -116,6 +117,12 @@ async function loadProducts() {
         mockClass:    p.mock_class || 'tote',
         coleccion:    p.coleccion || ''
       }));
+
+      // Solo mostrar colecciones que de verdad tienen al menos un producto activo
+      const coleccionesConProductos = colecciones.filter(c =>
+        allProducts.some(p => p.coleccion === c.id)
+      );
+      renderColeccionFilterButtons(coleccionesConProductos);
 
       filteredProducts = [...allProducts];
       renderCatalog();
@@ -312,15 +319,20 @@ function renderCatalog() {
 
 // ── FILTERS AND SEARCH ──
 let currentCategory = 'todos';
+let currentColeccion = 'todas';
 let searchQuery = '';
 
 function applyFiltersAndSearch() {
   let temp = allProducts;
-  
+
   if (currentCategory !== 'todos') {
     temp = allProducts.filter(p => (p._slug || p.category) === currentCategory);
   }
-  
+
+  if (currentColeccion !== 'todas') {
+    temp = temp.filter(p => p.coleccion === currentColeccion);
+  }
+
   if (searchQuery.trim() !== '') {
     const q = searchQuery.toLowerCase().trim();
     temp = temp.filter(p => 
@@ -395,6 +407,39 @@ function renderFilterButtons(categories) {
     filterContainer.appendChild(btn);
   });
   currentCategory = 'todos';
+}
+
+// ── FILTRO DE COLECCIONES ──
+const coleccionFilterContainer = document.getElementById('colecciones-filters');
+if (coleccionFilterContainer) {
+  coleccionFilterContainer.addEventListener('click', (e) => {
+    const btn = e.target.closest('.filter');
+    if (!btn) return;
+    coleccionFilterContainer.querySelectorAll('.filter').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentColeccion = btn.dataset.coleccion;
+    applyFiltersAndSearch();
+  });
+}
+
+function renderColeccionFilterButtons(colecciones) {
+  if (!coleccionFilterContainer) return;
+  if (!colecciones.length) {
+    coleccionFilterContainer.style.display = 'none';
+    coleccionFilterContainer.innerHTML = '';
+    currentColeccion = 'todas';
+    return;
+  }
+  coleccionFilterContainer.style.display = '';
+  coleccionFilterContainer.innerHTML = `<button class="filter active" data-coleccion="todas"><span class="filter-all">✦</span> Todas las colecciones</button>`;
+  colecciones.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'filter';
+    btn.dataset.coleccion = c.id;
+    btn.textContent = `${c.emoji || '🎬'} ${c.nombre}`;
+    coleccionFilterContainer.appendChild(btn);
+  });
+  currentColeccion = 'todas';
 }
 
 // Search input events with debounce (#22)
