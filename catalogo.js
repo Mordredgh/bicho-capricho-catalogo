@@ -137,11 +137,30 @@ async function loadProducts() {
       applyProductoFromUrl();
       return;
     } catch (e) {
-      console.warn('Supabase no disponible, usando defaults:', e.message);
+      console.warn('Supabase no disponible; no se mostraran productos demo en produccion:', e.message);
+      allProducts = [];
+      filteredProducts = [];
+      _coleccionesData = [];
+      renderColeccionFilterButtons([]);
+      renderCatalog();
+      renderRecienAgregado([]);
+      injectProductSchema([]);
+      if (typeof calibrateSlider === 'function') calibrateSlider();
+      return;
     }
   }
 
-  // ── FALLBACK: solo defaults si Supabase no responde ──
+  // Fallback demo solo para desarrollo local. En produccion nunca se deben
+  // mostrar productos falsos si Supabase falla o esta vacio.
+  const allowDemoFallback = ['localhost', '127.0.0.1', ''].includes(location.hostname) || location.protocol === 'file:';
+  if (!allowDemoFallback) {
+    allProducts = [];
+    filteredProducts = [];
+    renderCatalog();
+    if (typeof calibrateSlider === 'function') calibrateSlider();
+    return;
+  }
+
   try {
     allProducts = [...defaultProducts];
     filteredProducts = [...allProducts];

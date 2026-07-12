@@ -1356,9 +1356,10 @@
       return data;
     }
     if (method === 'DELETE') {
-      const { error } = await q.delete().eq('id', id);
+      const { data, error } = await q.delete().eq('id', id).select('id');
       if (error) throw new Error(error.message);
-      return [];
+      if (!data || data.length === 0) throw new Error('No se eliminó ningún producto. Revisa permisos de Supabase.');
+      return data;
     }
     throw new Error(`Método no soportado: ${method}`);
   }
@@ -2229,9 +2230,20 @@
     if (undoTimer) clearTimeout(undoTimer);
     undoTimer = setTimeout(async () => {
       toastEl.classList.remove('show');
+      const failed = [];
       for (const id of ids) {
-        try { await supaAdmin('DELETE', 'catalogo_productos', null, `?id=eq.${id}`); } catch (e) { console.warn(e.message); }
+        try {
+          await supaAdmin('DELETE', 'catalogo_productos', null, `?id=eq.${id}`);
+        } catch (e) {
+          failed.push(id);
+          console.warn(e.message);
+        }
         pendingDeleteIds.delete(id);
+      }
+      if (failed.length) {
+        showToast(`❌ ${failed.length} producto(s) no se pudieron eliminar. Se restauraron en la tabla.`);
+      } else {
+        showToast(`✅ ${ids.length} producto(s) eliminados definitivamente`);
       }
       await renderTable();
     }, 5000);
