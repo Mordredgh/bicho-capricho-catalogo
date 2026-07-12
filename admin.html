@@ -664,6 +664,31 @@
     .design-chip-label { font-size: 9px; font-weight: 700; color: var(--forest); text-align: center; line-height: 1.15; }
     .design-generate-btn { margin-top: 18px; }
     .design-progress { font-size: 12px; color: var(--olive); padding: 0 26px 22px; }
+    .design-progress-bar {
+      height: 6px; border-radius: 999px; background: rgba(28,79,50,.1);
+      overflow: hidden; margin-top: 6px;
+    }
+    .design-progress-bar-fill {
+      height: 100%; background: var(--lime); border-radius: 999px; transition: width .2s ease;
+    }
+    .design-empty-state {
+      text-align: center; padding: 48px 24px; background: var(--white);
+      border-radius: 20px; box-shadow: 8px 10px 0 rgba(28,79,50,.06);
+    }
+    .design-empty-icon { font-size: 40px; display: block; margin-bottom: 12px; }
+    .design-empty-state p { margin: 4px 0; color: var(--olive); font-size: 13px; }
+    .design-empty-state p strong { color: var(--forest); font-size: 15px; }
+    .design-raw-thumb {
+      width: 44px; height: 44px; border-radius: 10px; object-fit: contain; flex-shrink: 0;
+      background-image: linear-gradient(45deg, #eee 25%, transparent 25%), linear-gradient(-45deg, #eee 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #eee 75%), linear-gradient(-45deg, transparent 75%, #eee 75%);
+      background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;
+      box-shadow: 0 2px 6px rgba(28,79,50,.15);
+    }
+    .design-cut-bulk button {
+      background: none; border: none; color: var(--grape); font: 800 10px 'Nunito';
+      cursor: pointer; padding: 2px 4px; text-decoration: underline; text-underline-offset: 2px;
+    }
+    .design-cut-bulk button:hover { color: var(--forest); }
 
     /* ── SCRAPBOOK BOUTIQUE UPGRADES ── */
     
@@ -1638,12 +1663,24 @@
   function renderDesignManager() {
     const container = document.getElementById('design-manager-list');
     if (!container) return;
-    if (!_pendingDesigns.length) { container.innerHTML = ''; return; }
+    if (!_pendingDesigns.length) {
+      container.innerHTML = `
+        <div class="design-empty-state">
+          <span class="design-empty-icon">🎨</span>
+          <p><strong>Todavía no hay diseños en cola.</strong></p>
+          <p>Sube uno o varios PNG transparentes con el botón de arriba para empezar.</p>
+        </div>
+      `;
+      return;
+    }
     const grupos = mockupsPorCorte();
     container.innerHTML = _pendingDesigns.map(d => `
       <div class="design-card">
         <div class="design-card-header">
-          <h4>🎨 ${esc(d.name)}</h4>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <img class="design-raw-thumb" src="${esc(d.img.src)}" alt="Diseño original">
+            <h4>${esc(d.name)}</h4>
+          </div>
           <button type="button" class="design-remove-btn" onclick="removePendingDesign('${d.localId}')" title="Quitar diseño">✕</button>
         </div>
         <div class="design-card-body">
@@ -1670,7 +1707,13 @@
             <div class="design-mockup-panel">
               ${CORTES.map(cut => `
                 <div class="design-cut-group">
-                  <span class="design-cut-title">${cut}</span>
+                  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                    <span class="design-cut-title" style="margin-bottom:0;">${cut}</span>
+                    <span class="design-cut-bulk">
+                      <button type="button" onclick="toggleAllCorte('${d.localId}', '${cut}', true)">Todos</button>
+                      <button type="button" onclick="toggleAllCorte('${d.localId}', '${cut}', false)">Ninguno</button>
+                    </span>
+                  </div>
                   <div class="design-chip-row">
                     ${grupos[cut].map(m => `
                       <label class="design-color-chip ${d.selectedMockupIds.has(m.id) ? 'active' : ''}" title="${esc(m.nombre.replace(cut + ' - ', ''))}">
@@ -1697,16 +1740,39 @@
     });
   }
 
+  function toggleAllCorte(localId, cut, selectAll) {
+    const d = _pendingDesigns.find(x => x.localId === localId);
+    if (!d) return;
+    const grupos = mockupsPorCorte();
+    grupos[cut].forEach(m => {
+      if (selectAll) d.selectedMockupIds.add(m.id); else d.selectedMockupIds.delete(m.id);
+    });
+    renderDesignManager();
+  }
+  window.toggleAllCorte = toggleAllCorte;
+
   async function generateProductsForDesign(localId) {
     const d = _pendingDesigns.find(x => x.localId === localId);
     if (!d) return;
     const progressEl = document.getElementById(`design-progress-${localId}`);
     let totalCreados = 0;
 
+    const totalColores = CORTES.reduce((sum, cut) =>
+      sum + _mockups.filter(m => m.nombre.startsWith(cut + ' - ') && d.selectedMockupIds.has(m.id)).length, 0);
+    let hechos = 0;
+    const actualizarBarra = (etiqueta) => {
+      if (!progressEl) return;
+      const pct = totalColores ? Math.round((hechos / totalColores) * 100) : 0;
+      progressEl.innerHTML = `
+        <div>${etiqueta} (${hechos}/${totalColores})</div>
+        <div class="design-progress-bar"><div class="design-progress-bar-fill" style="width:${pct}%"></div></div>
+      `;
+    };
+
     for (const cut of CORTES) {
       const mockupsDelCorte = _mockups.filter(m => m.nombre.startsWith(cut + ' - ') && d.selectedMockupIds.has(m.id));
       if (!mockupsDelCorte.length) continue;
-      if (progressEl) progressEl.textContent = `Generando "${d.name} - ${cut}" (${mockupsDelCorte.length} colores)...`;
+      actualizarBarra(`Generando "${d.name} - ${cut}"`);
 
       const results = [];
       for (const mockup of mockupsDelCorte) {
@@ -1730,6 +1796,8 @@
         } catch (e) {
           console.warn(`Fallo mockup ${mockup.nombre}:`, e.message);
         }
+        hechos++;
+        actualizarBarra(`Generando "${d.name} - ${cut}"`);
       }
       if (!results.length) continue;
 
@@ -1761,7 +1829,7 @@
       }
     }
 
-    if (progressEl) progressEl.textContent = '';
+    if (progressEl) progressEl.innerHTML = '';
     showToast(`✅ ${totalCreados} producto(s) creado(s) para "${d.name}". Precio queda en "Consultar" — edítalos para poner el precio real.`);
     removePendingDesign(localId);
     await renderTable();
