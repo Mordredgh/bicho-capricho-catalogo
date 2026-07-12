@@ -397,7 +397,7 @@ footer{background:var(--forest);color:var(--cream);padding:80px 0 25px}.footer-m
   border: 2px solid var(--forest);
   border-radius: 24px;
   box-shadow: 12px 16px 0 rgba(28,79,50,.2);
-  width: 100%; max-width: 900px;
+  width: 100%; max-width: 900px; max-height: 88vh;
   overflow: visible; position: relative; margin: auto;
   transform: translateY(20px); transition: transform .3s;
 }
@@ -413,17 +413,16 @@ footer{background:var(--forest);color:var(--cream);padding:80px 0 25px}.footer-m
 .p-modal-close:hover { transform: scale(1.1); }
 .p-modal-grid {
   display: grid; grid-template-columns: 1fr 1fr;
-  align-items: start;
+  height: 100%; max-height: 88vh;
 }
 
 /* Modal Gallery */
 .p-modal-gallery {
   background: var(--pink);
-  position: sticky; top: 0;
   overflow: hidden;
   border-right: 2px solid var(--forest);
   display: flex; align-items: center; justify-content: center;
-  min-height: 400px; max-height: 520px;
+  height: 100%; min-height: 400px;
   border-top-left-radius: 22px;
   border-bottom-left-radius: 22px;
 }
@@ -463,6 +462,8 @@ footer{background:var(--forest);color:var(--cream);padding:80px 0 25px}.footer-m
   padding: 40px;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  max-height: 88vh;
   border-top-right-radius: 22px;
   border-bottom-right-radius: 22px;
 }
@@ -490,14 +491,16 @@ footer{background:var(--forest);color:var(--cream);padding:80px 0 25px}.footer-m
 .pm-wa-btn:hover { transform: translate(-2px, -2px); box-shadow: 6px 7px 0 var(--lime); }
 
 @media(max-width:800px){
-  .p-modal-grid { grid-template-columns: 1fr; }
+  .p-modal { max-height: none; }
+  .p-modal-grid { grid-template-columns: 1fr; height: auto; max-height: none; }
   .p-modal-gallery {
-    position: static; min-height: 250px; max-height: 340px;
+    height: auto; min-height: 250px; max-height: 340px;
     border-right: none; border-bottom: 2px solid var(--forest);
     border-top-left-radius: 22px; border-top-right-radius: 22px; border-bottom-left-radius: 0;
   }
   .p-modal-info {
     padding: 25px;
+    overflow-y: visible; max-height: none;
     border-bottom-left-radius: 22px; border-bottom-right-radius: 22px; border-top-right-radius: 0;
   }
   .pm-title { font-size: 28px; }
