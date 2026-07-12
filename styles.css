@@ -419,6 +419,7 @@ footer{background:var(--forest);color:var(--cream);padding:80px 0 25px}.footer-m
 /* Modal Gallery */
 .p-modal-gallery {
   background: var(--pink);
+  position: relative;
   overflow: hidden;
   border-right: 2px solid var(--forest);
   display: flex; align-items: center; justify-content: center;
