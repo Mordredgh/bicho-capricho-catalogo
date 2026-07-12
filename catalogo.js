@@ -723,24 +723,26 @@ function openProductModal(product) {
     if (productGuide === 'playera') {
       estContainer.innerHTML = `
         <div class="size-guide-accordion" style="margin-bottom:16px;">
-          <div style="padding:16px;">
+          <div style="padding:18px 20px;">
             <strong style="display:block;margin-bottom:10px;">🎨 Tu diseño puede ir en:</strong>
-            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+            <ul style="list-style:none;padding:0;margin:0 0 16px;">
               ${ESTAMPADOS.map(e => `
-                <div style="border:2px solid var(--forest);border-radius:12px;padding:10px 14px;background:#fff;">
-                  ${esc(e.label)}<br><small style="color:var(--olive);">${esc(e.zona)}</small>
-                </div>
+                <li style="padding:6px 0;border-bottom:1px dashed rgba(28,79,50,.2);">
+                  <strong style="color:var(--forest);">${esc(e.label)}</strong>
+                  <span style="color:var(--olive);"> — ${esc(e.zona)}</span>
+                </li>
               `).join('')}
-            </div>
-            <strong style="display:block;margin-bottom:8px;font-size:13px;">Y en estos tamaños:</strong>
-            <div style="display:flex;gap:8px;margin-bottom:14px;">
+            </ul>
+            <strong style="display:block;margin-bottom:6px;">Y en estos tamaños:</strong>
+            <ul style="list-style:none;padding:0;margin:0 0 16px;">
               ${TAMANOS_ESTAMPADO.map(t => `
-                <div style="border:2px solid var(--forest);border-radius:12px;padding:10px 14px;background:#fff;">
-                  ${esc(t.label)}<br><small style="color:var(--olive);">${esc(t.dim)}</small>
-                </div>
+                <li style="padding:6px 0;border-bottom:1px dashed rgba(28,79,50,.2);">
+                  <strong style="color:var(--forest);">${esc(t.label)}</strong>
+                  <span style="color:var(--olive);"> — ${esc(t.dim)}</span>
+                </li>
               `).join('')}
-            </div>
-            <p style="font-weight:800;color:var(--grape);">Estampado desde $${product.precioEstampadoDesde || 180} MXN</p>
+            </ul>
+            <p style="font-weight:800;color:var(--grape);margin:0;">Estampado desde $${product.precioEstampadoDesde || 180} MXN</p>
           </div>
         </div>
       `;
