@@ -925,22 +925,6 @@
             </div>
             <div id="swatch-list" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;"></div>
           </div>
-          <div class="form-group full" style="border-top:2px dashed var(--forest); padding-top:16px; margin-top:8px;">
-            <label>🎨 Diseño de playera sobre tus mockups (opcional)</label>
-            <p style="font-size:11px; color:var(--olive); margin-bottom:8px;">Sube el diseño en PNG transparente, elige en cuáles de tus mockups lo quieres ver, y se genera solo la foto principal + galería + swatches de color. No sube nada de esto por separado — reemplaza Foto Principal y Galería de arriba.</p>
-            <input type="file" id="f-design-png" accept="image/png">
-            <div id="design-mockup-picker" style="margin-top:10px; font-size:12px;"></div>
-            <div style="display:flex; gap:18px; align-items:center; margin-top:10px; flex-wrap:wrap;">
-              <label style="font-size:12px;">Tamaño diseño
-                <input type="range" id="f-design-scale" min="30" max="100" value="55" style="vertical-align:middle">
-              </label>
-              <label style="font-size:12px;">Posición vertical
-                <input type="range" id="f-design-offset-y" min="0" max="60" value="22" style="vertical-align:middle">
-              </label>
-              <button type="button" class="btn-primary" style="padding:8px 16px;margin:0;box-shadow:2px 3px 0 var(--forest);" onclick="generateMockupComposites()">✨ Generar fotos</button>
-            </div>
-            <div id="design-preview-grid" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;"></div>
-          </div>
         </div>
         <div class="form-actions">
           <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>
@@ -1634,7 +1618,6 @@
       _mockups = [];
     }
     renderMockupList();
-    renderMockupPicker();
   }
 
   async function addMockup() {
@@ -1686,22 +1669,6 @@
     `).join('');
   }
 
-  function renderMockupPicker() {
-    const el = document.getElementById('design-mockup-picker');
-    if (!el) return;
-    if (!_mockups.length) {
-      el.innerHTML = '<p style="color:var(--olive)">Sube mockups primero (arriba, en la sección de Mockups de playeras).</p>';
-      return;
-    }
-    el.innerHTML = _mockups.map(m => `
-      <label style="display:inline-flex;align-items:center;gap:6px;margin:4px 12px 4px 0;">
-        <input type="checkbox" class="mockup-pick" value="${m.id}">
-        <img src="${m.foto_url}" style="width:22px;height:22px;object-fit:cover;border-radius:4px;">
-        ${esc(m.nombre)}
-      </label>
-    `).join('');
-  }
-
   function loadImageFromFile(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -1726,65 +1693,6 @@
     });
   }
 
-  async function generateMockupComposites() {
-    const designFile = document.getElementById('f-design-png').files[0];
-    if (!designFile) { showToast('⚠️ Sube el PNG del diseño primero'); return; }
-
-    const checked = Array.from(document.querySelectorAll('.mockup-pick:checked')).map(cb => cb.value);
-    if (!checked.length) { showToast('⚠️ Elige al menos un mockup de playera'); return; }
-
-    const scale = parseInt(document.getElementById('f-design-scale').value, 10) / 100;
-    const offsetY = parseInt(document.getElementById('f-design-offset-y').value, 10) / 100;
-
-    showToast('⏳ Generando mockups, espera...');
-
-    try {
-      const designImg = await loadImageFromFile(designFile);
-      const results = [];
-
-      for (const id of checked) {
-        const mockup = _mockups.find(m => m.id === id);
-        if (!mockup) continue;
-        const mockupImg = await loadImageFromUrl(mockup.foto_url);
-
-        const canvas = document.createElement('canvas');
-        canvas.width = mockupImg.naturalWidth;
-        canvas.height = mockupImg.naturalHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(mockupImg, 0, 0);
-
-        const dW = canvas.width * scale;
-        const dH = dW * (designImg.naturalHeight / designImg.naturalWidth);
-        const dX = (canvas.width - dW) / 2;
-        const dY = canvas.height * offsetY;
-        ctx.drawImage(designImg, dX, dY, dW, dH);
-
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', 0.9));
-        const safeName = mockup.nombre.replace(/[^a-z0-9]/gi, '-').toLowerCase();
-        const path = `productos/${Date.now()}-${safeName}.webp`;
-        const url = await supaUploadAuth(path, blob);
-        results.push({ url, hex: mockup.color_hex });
-      }
-
-      if (!results.length) { showToast('❌ No se generó ningún mockup'); return; }
-
-      currentMainImage = results[0].url;
-      currentGallery = results.slice(1).map(r => r.url);
-      selectedColors = results.map(r => r.hex);
-      renderMainPreview();
-      renderGalleryPreviews();
-      renderSwatches();
-
-      document.getElementById('design-preview-grid').innerHTML = results.map(r =>
-        `<img src="${r.url}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:2px solid var(--forest)">`
-      ).join('');
-
-      showToast(`✅ ${results.length} mockup(s) generado(s) — foto principal y galería listas`);
-    } catch (e) {
-      showToast(`❌ Error generando mockups: ${e.message}`);
-    }
-  }
-  window.generateMockupComposites = generateMockupComposites;
   window.addMockup = addMockup;
 
   let currentAdminFilter = 'todos';
@@ -2064,10 +1972,6 @@
       const reminder = document.getElementById('textil-reminder');
       if (reminder) reminder.style.display = 'none';
     }
-    document.getElementById('f-design-png').value = '';
-    document.getElementById('design-preview-grid').innerHTML = '';
-    document.querySelectorAll('.mockup-pick').forEach(cb => cb.checked = false);
-
     document.getElementById('modal-overlay').classList.add('open');
     setTimeout(() => document.getElementById('f-name').focus(), 100);
   }
