@@ -728,9 +728,9 @@ footer{background:var(--forest);color:var(--cream);padding:80px 0 25px}.footer-m
 /* --- Mascota dinámica en la cabecera del catálogo --- */
 .section-heading { position: relative; }
 .heading-mascot {
-  position: absolute; right: -18px; top: -78px;
-  width: 108px; height: 108px; z-index: 0;
-  opacity: .82;
+  position: absolute; right: 0; top: -132px;
+  width: 90px; height: 90px; z-index: 0;
+  opacity: .78;
   pointer-events: none;
 }
 .heading-mascot img {
