@@ -2902,7 +2902,9 @@ footer{background:var(--forest);color:var(--cream);padding:80px 0 25px}.footer-m
   max-width: min(82%, 420px);
   overflow-x: auto;
   padding: 4px 6px;
+  scrollbar-width: none;
 }
+.pm-thumbs::-webkit-scrollbar{display:none}
 .pm-thumb {
   width: 58px;
   min-height: 58px;

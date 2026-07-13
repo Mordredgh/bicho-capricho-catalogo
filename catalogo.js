@@ -781,8 +781,8 @@ function syncActiveModalColor() {
 }
 
 function getProductCutName(product) {
-  const match = String(product?.name || '').match(/\s-\s(Hombre|Mujer|Juvenil|NiÃ±os|Niños)$/i);
-  return match ? match[1].replace('NiÃ±os', 'Niños') : '';
+  const match = String(product?.name || '').match(/\s-\s(Hombre|Mujer|Juvenil|Niños)$/i);
+  return match ? match[1] : '';
 }
 
 function getActiveModalColorLabel() {
@@ -814,7 +814,7 @@ function renderSelectedModalMeta() {
   const items = [
     corte ? `Corte: ${corte}` : '',
     color ? `Color: ${color}` : '',
-    coleccionNombre ? `ColecciÃ³n: ${coleccionNombre}` : ''
+    coleccionNombre ? `Colección: ${coleccionNombre}` : ''
   ].filter(Boolean);
   meta.hidden = !items.length;
   meta.innerHTML = items.map(item => `<span>${esc(item)}</span>`).join('');
