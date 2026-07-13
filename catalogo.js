@@ -93,9 +93,35 @@ async function loadProducts() {
   // ── CATEGORÍAS DE SUPABASE (solo sincronizar labels, NO productos) ──
   if (typeof supaGet !== 'undefined') {
     try {
+      const publicProductSelect = [
+        'id',
+        'nombre',
+        'cat',
+        'precio',
+        'price_min',
+        'price_max',
+        'descripcion',
+        'badge',
+        'badge_pos',
+        'color_representativo',
+        'colores',
+        'foto',
+        'galeria',
+        'size_guide',
+        'free_shipping',
+        'mock_class',
+        'coleccion',
+        'grupo_diseno',
+        'tipo_item',
+        'orden',
+        'visible_catalogo',
+        'derechos_sensibles',
+        'precio_estampado_desde',
+        'created_at'
+      ].join(',');
       const [categories, rows, colecciones] = await Promise.all([
         supaGet('categories', 'select=id,name,emoji,color&order=name'),
-        supaGet('catalogo_productos', 'select=*&activo=eq.true&visible_catalogo=eq.true&order=orden.asc,created_at.desc'),
+        supaGet('catalogo_productos', `select=${publicProductSelect}&activo=eq.true&visible_catalogo=eq.true&order=orden.asc,created_at.desc`),
         supaGet('catalogo_colecciones', 'select=id,nombre,emoji,descripcion,banner_url,orden,destacada,visible_catalogo,derechos_sensibles&activa=eq.true&visible_catalogo=eq.true&order=orden.asc,nombre.asc').catch(() => [])
       ]);
 
