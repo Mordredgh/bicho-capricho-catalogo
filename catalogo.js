@@ -129,6 +129,7 @@ async function loadProducts() {
       filteredProducts = [...allProducts];
       renderCatalog();
       renderRecienAgregado(allProducts);
+      renderVistosRecientes();
       injectProductSchema(allProducts);
       if (typeof calibrateSlider === 'function') calibrateSlider();
       applyColeccionFromUrl();
@@ -142,6 +143,7 @@ async function loadProducts() {
       renderColeccionFilterButtons([]);
       renderCatalog();
       renderRecienAgregado([]);
+      renderVistosRecientes();
       injectProductSchema([]);
       if (typeof calibrateSlider === 'function') calibrateSlider();
       return;
@@ -155,6 +157,7 @@ async function loadProducts() {
     allProducts = [];
     filteredProducts = [];
     renderCatalog();
+    renderVistosRecientes();
     if (typeof calibrateSlider === 'function') calibrateSlider();
     return;
   }
@@ -548,13 +551,31 @@ function renderColeccionBanner(id) {
     return;
   }
   coleccionBannerEl.style.display = '';
+  const collectionUrl = `${window.location.origin}${window.location.pathname}?coleccion=${encodeURIComponent(c.id)}`;
   coleccionBannerEl.innerHTML = `
     ${c.banner_url ? `<img class="coleccion-hero-banner-img" src="${c.banner_url}" alt="${esc(c.nombre)}" loading="lazy">` : ''}
     <div style="text-align:center;margin-bottom:18px;">
       <strong style="font-family:'Fredoka',sans-serif;font-size:20px;">${c.emoji || '🎬'} ${esc(c.nombre)}</strong>
       ${c.descripcion ? `<p style="margin-top:6px;color:var(--olive);max-width:560px;margin-left:auto;margin-right:auto;">${esc(c.descripcion)}</p>` : ''}
+      <button type="button" class="collection-share-btn" data-collection-url="${esc(collectionUrl)}">Copiar link de colección ↗</button>
     </div>
   `;
+  const shareBtn = coleccionBannerEl.querySelector('[data-collection-url]');
+  if (shareBtn) {
+    shareBtn.addEventListener('click', async () => {
+      const url = shareBtn.dataset.collectionUrl;
+      try {
+        if (navigator.share) {
+          await navigator.share({ title: `${c.nombre} | Bicho Capricho`, text: 'Mira esta colección del catálogo.', url });
+        } else if (navigator.clipboard) {
+          await navigator.clipboard.writeText(url);
+          const original = shareBtn.textContent;
+          shareBtn.textContent = 'Link copiado ✓';
+          setTimeout(() => { shareBtn.textContent = original; }, 1800);
+        }
+      } catch { /* usuario cancelo o navegador no permite compartir */ }
+    });
+  }
 }
 
 // Permite compartir un link directo a una colección: ?coleccion=mario-movie
@@ -586,6 +607,44 @@ function renderRecienAgregado(products) {
       <p style="font-size:12px;font-weight:800;margin:6px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.name)}</p>
       <p style="font-size:12px;color:var(--grape);font-weight:700;">${esc(p.price)}</p>
     </div>
+  `).join('');
+}
+
+function getRecentViewedIds() {
+  try {
+    return JSON.parse(localStorage.getItem('bc_recent_viewed') || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentViewed(product) {
+  if (!product?.id) return;
+  const ids = [product.id, ...getRecentViewedIds().filter(id => id !== product.id)].slice(0, 8);
+  localStorage.setItem('bc_recent_viewed', JSON.stringify(ids));
+  renderVistosRecientes();
+}
+
+function renderVistosRecientes() {
+  const section = document.getElementById('vistos-section');
+  const list = document.getElementById('vistos-list');
+  if (!section || !list || !allProducts.length) return;
+  const vistos = getRecentViewedIds()
+    .map(id => allProducts.find(p => p.id === id))
+    .filter(Boolean)
+    .slice(0, 8);
+  if (!vistos.length) {
+    section.style.display = 'none';
+    list.innerHTML = '';
+    return;
+  }
+  section.style.display = 'block';
+  list.innerHTML = vistos.map(p => `
+    <button type="button" class="crosssell-card recent-view-card" style="flex:0 0 140px; cursor:pointer; border:0; text-align:left;" onclick='openProductModal(allProducts.find(x=>x.id==="${p.id}"))'>
+      <img src="${p.mainImage || 'assets/favicon-180.png'}" alt="${esc(p.name)}" loading="lazy" style="width:100%;height:100px;object-fit:cover;border-radius:10px;">
+      <p style="font-size:12px;font-weight:800;margin:6px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.displayName || p.name)}</p>
+      <p style="font-size:12px;color:var(--grape);font-weight:700;">${esc(p.price)}</p>
+    </button>
   `).join('');
 }
 
@@ -650,6 +709,7 @@ if (searchClear) {
 let modalImages = [];
 let modalColorPairs = [];
 let currentImageIndex = 0;
+let currentModalProduct = null;
 
 function buildProductImages(product) {
   const images = [];
@@ -712,6 +772,46 @@ function syncActiveModalColor() {
   });
 }
 
+function getProductCutName(product) {
+  const match = String(product?.name || '').match(/\s-\s(Hombre|Mujer|Juvenil|NiÃ±os|Niños)$/i);
+  return match ? match[1].replace('NiÃ±os', 'Niños') : '';
+}
+
+function getActiveModalColorLabel() {
+  if (!modalColorPairs.length) return '';
+  const activeImage = modalImages[currentImageIndex];
+  const activeIndex = modalColorPairs.findIndex(pair => pair.image === activeImage);
+  if (activeIndex < 0) return '';
+  return colorLabel(modalColorPairs[activeIndex].color, activeIndex);
+}
+
+function getModalProductUrl(product = currentModalProduct) {
+  const params = new URLSearchParams();
+  if (product?.id) params.set('producto', product.id);
+  const color = getActiveModalColorLabel();
+  const corte = getProductCutName(product);
+  if (corte) params.set('corte', corte);
+  if (color) params.set('color', color);
+  return `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+}
+
+function renderSelectedModalMeta() {
+  const meta = document.getElementById('pm-selected-meta');
+  if (!meta || !currentModalProduct) return;
+  const corte = getProductCutName(currentModalProduct);
+  const color = getActiveModalColorLabel();
+  const coleccionNombre = currentModalProduct.coleccion
+    ? ((_coleccionesData.find(c => c.id === currentModalProduct.coleccion) || {}).nombre || currentModalProduct.coleccion)
+    : '';
+  const items = [
+    corte ? `Corte: ${corte}` : '',
+    color ? `Color: ${color}` : '',
+    coleccionNombre ? `ColecciÃ³n: ${coleccionNombre}` : ''
+  ].filter(Boolean);
+  meta.hidden = !items.length;
+  meta.innerHTML = items.map(item => `<span>${esc(item)}</span>`).join('');
+}
+
 function setupModalImageZoom() {
   const carousel = document.getElementById('pm-carousel');
   if (!carousel) return;
@@ -737,6 +837,8 @@ function setupModalImageZoom() {
 
 function openProductModal(product) {
   const modal = document.getElementById('p-modal-overlay');
+  currentModalProduct = product;
+  saveRecentViewed(product);
   
   const modalDisplayName = product.displayName || product.name.replace(/\s-\s(?:Hombre|Mujer|Juvenil|Ni.os)$/i, '').trim();
   document.getElementById('pm-title').textContent = modalDisplayName;
@@ -786,8 +888,25 @@ function openProductModal(product) {
   document.getElementById('pm-desc').textContent = product.desc;
   document.getElementById('pm-price').textContent = product.price;
 
-  const msg = encodeURIComponent(`Hola, me encantó ${product.name}. ¿Me compartes más información?`);
-  document.getElementById('pm-wa-btn').href = `https://wa.me/${WA_NUMBER}?text=${msg}`;
+  const waBtn = document.getElementById('pm-wa-btn');
+  if (waBtn) {
+    waBtn.onclick = () => {
+      const corte = getProductCutName(currentModalProduct);
+      const color = getActiveModalColorLabel();
+      const activeColeccion = currentModalProduct?.coleccion
+        ? ((_coleccionesData.find(c => c.id === currentModalProduct.coleccion) || {}).nombre || currentModalProduct.coleccion)
+        : '';
+      const details = [
+        `Producto: ${modalDisplayName}`,
+        corte ? `Corte: ${corte}` : '',
+        color ? `Color: ${color}` : '',
+        activeColeccion ? `Colección: ${activeColeccion}` : '',
+        `Link: ${getModalProductUrl()}`
+      ].filter(Boolean).join('\n');
+      waBtn.href = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Hola, me interesa este producto del catálogo:\n\n${details}\n\n¿Me compartes disponibilidad y opciones de personalización?`)}`;
+    };
+    waBtn.onclick();
+  }
 
   // Fallback: textil sin guia asignada se asume playera (misma regla que abajo)
   let productGuide = product.sizeGuide;
@@ -1009,8 +1128,12 @@ function openProductModal(product) {
   const shareBtn = document.getElementById('pm-share-btn');
   if (shareBtn) {
     shareBtn.onclick = async () => {
-      const shareUrl = `${window.location.origin}${window.location.pathname}?producto=${encodeURIComponent(product.id)}`;
-      const shareData = { title: product.name, text: `Mira "${product.name}" en Bicho Capricho`, url: shareUrl };
+      const shareUrl = getModalProductUrl(product);
+      const shareData = {
+        title: `${modalDisplayName} | Bicho Capricho`,
+        text: `Mira este producto en el catálogo${getProductCutName(product) ? `, corte ${getProductCutName(product)}` : ''}${getActiveModalColorLabel() ? `, color ${getActiveModalColorLabel()}` : ''}.`,
+        url: shareUrl
+      };
       if (navigator.share) {
         try { await navigator.share(shareData); } catch (e) { /* usuario canceló, ignora */ }
       } else if (navigator.clipboard) {
@@ -1049,6 +1172,7 @@ let modalTriggerEl = null;
 function renderModalCarousel() {
   const carousel = document.getElementById('pm-carousel');
   const dotsContainer = document.getElementById('pm-dots');
+  const thumbsContainer = document.getElementById('pm-thumbs');
 
   carousel.innerHTML = modalImages.map((src, i) => `<img src="${src}" class="pm-carousel-img loaded" alt="${esc(currentModalProductName)}${modalImages.length > 1 ? ` — foto ${i + 1} de ${modalImages.length}` : ''}" decoding="async">`).join('');
   carousel.querySelectorAll('img').forEach(img => {
@@ -1061,10 +1185,24 @@ function renderModalCarousel() {
   
   if (modalImages.length > 1) {
     dotsContainer.innerHTML = modalImages.map((_, i) => `<div class="pm-dot ${i === 0 ? 'active' : ''}"></div>`).join('');
+    if (thumbsContainer) {
+      thumbsContainer.innerHTML = modalImages.map((src, i) => `
+        <button type="button" class="pm-thumb ${i === 0 ? 'active' : ''}" data-img-index="${i}" aria-label="Ver foto ${i + 1}">
+          <img src="${src}" alt="" loading="lazy">
+        </button>
+      `).join('');
+      thumbsContainer.querySelectorAll('[data-img-index]').forEach(button => {
+        button.addEventListener('click', () => {
+          currentImageIndex = Number(button.dataset.imgIndex);
+          updateCarouselPos();
+        });
+      });
+    }
     document.getElementById('pm-prev').style.display = 'block';
     document.getElementById('pm-next').style.display = 'block';
   } else {
     dotsContainer.innerHTML = '';
+    if (thumbsContainer) thumbsContainer.innerHTML = '';
     document.getElementById('pm-prev').style.display = 'none';
     document.getElementById('pm-next').style.display = 'none';
   }
@@ -1083,7 +1221,13 @@ function updateCarouselPos() {
   document.querySelectorAll('.pm-dot').forEach((dot, i) => {
     dot.classList.toggle('active', i === currentImageIndex);
   });
+  document.querySelectorAll('.pm-thumb').forEach((thumb, i) => {
+    thumb.classList.toggle('active', i === currentImageIndex);
+  });
   syncActiveModalColor();
+  renderSelectedModalMeta();
+  const waBtn = document.getElementById('pm-wa-btn');
+  if (waBtn && typeof waBtn.onclick === 'function') waBtn.onclick();
 }
 
 document.getElementById('pm-prev').addEventListener('click', () => {

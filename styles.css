@@ -83,6 +83,28 @@ footer{background:var(--forest);color:var(--cream);padding:80px 0 25px}.footer-m
   border-radius:20px;
   margin-bottom:14px;
 }
+.collection-share-btn{
+  border:1.5px solid rgba(28,79,50,.28);
+  background:rgba(255,253,248,.88);
+  color:var(--forest);
+  border-radius:999px;
+  padding:8px 13px;
+  font-weight:900;
+  cursor:pointer;
+  box-shadow:0 8px 18px rgba(28,79,50,.08);
+}
+.collection-share-btn:hover{transform:translateY(-1px);background:var(--butter)}
+.catalog-intent-note{
+  margin-top:8px;
+  font-size:13px;
+  line-height:1.45;
+  color:var(--olive);
+  font-weight:800;
+  background:rgba(255,253,248,.72);
+  border:1px dashed rgba(28,79,50,.18);
+  border-radius:14px;
+  padding:10px 12px;
+}
 .mini-faces i{width:44px;height:44px}
 .mini-faces img{width:40px;height:40px;object-fit:contain}
 .hero-mascot{position:absolute;z-index:2;width:480px;height:480px;object-fit:contain;left:18px;bottom:-2px;filter:drop-shadow(14px 18px 0 rgba(20,55,39,.18))}
@@ -2787,6 +2809,55 @@ footer{background:var(--forest);color:var(--cream);padding:80px 0 25px}.footer-m
 .pm-carousel.zooming .pm-carousel-img.is-active {
   transform: scale(1.16);
   filter: drop-shadow(0 30px 38px rgba(28, 79, 50, .2));
+}
+.pm-thumbs {
+  position: absolute;
+  left: 50%;
+  bottom: 38px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 4;
+  max-width: min(82%, 420px);
+  overflow-x: auto;
+  padding: 4px 6px;
+}
+.pm-thumb {
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgba(28, 79, 50, .24);
+  border-radius: 14px;
+  background: rgba(255, 253, 248, .82);
+  padding: 3px;
+  cursor: pointer;
+  flex: 0 0 auto;
+  box-shadow: 0 8px 18px rgba(28, 79, 50, .08);
+}
+.pm-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.pm-thumb.active {
+  border-color: var(--forest);
+  box-shadow: 0 0 0 2px var(--butter), 0 10px 22px rgba(28, 79, 50, .15);
+  background: var(--white);
+}
+.pm-selected-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -4px 0 14px;
+}
+.pm-selected-meta span {
+  border: 1px solid rgba(28, 79, 50, .16);
+  background: rgba(255, 253, 248, .86);
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: var(--forest);
+  font-size: 12px;
+  font-weight: 900;
 }
 .p-modal-gallery,
 .pm-carousel {

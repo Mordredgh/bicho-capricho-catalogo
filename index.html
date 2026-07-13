@@ -77,10 +77,10 @@
       <div class="hero-copy">
         <div class="eyebrow"><span>✦</span> Más que un regalo</div>
         <h1 id="hero-h1">Más que un <br><em id="hero-typewriter"><span id="hero-typewriter-text">regalo</span></em></h1>
-        <p>Personalizamos tus ideas para convertirlas en detalles que se sienten únicos, bonitos y muy tuyos. Porque lo hecho a mano siempre cuenta una historia.</p>
+        <p>Catálogo visual de productos, ideas y colecciones especiales que manejamos en Bicho Capricho. No es tienda en línea: aquí puedes explorar y pedir información directa.</p>
         <div class="hero-actions">
           <a class="button button-pink" href="#catalogo">Explorar productos <span>↗</span></a>
-          <a class="text-link" href="#personalizados">Quiero algo personalizado <span>→</span></a>
+          <a class="text-link" href="#contacto">Pedir información <span>→</span></a>
         </div>
         <div class="trust-row">
           <div class="mini-faces">
@@ -116,7 +116,10 @@
             <span class="kicker">Nuestro catálogo</span>
             <h2>Un detalle para cada ocasión</h2>
           </div>
-          <p>Explora nuestras ideas favoritas. Todo se puede adaptar con nombres, colores y mensajes especiales.</p>
+          <div>
+            <p>Explora nuestras ideas favoritas. Todo se puede adaptar con nombres, colores y mensajes especiales.</p>
+            <p class="catalog-intent-note">CatÃ¡logo de consulta: algunos diseÃ±os y colecciones especiales solo viven aquÃ­ y se cotizan por mensaje.</p>
+          </div>
           <div class="heading-mascot" id="heading-mascot">
             <img id="cat-mascot-img" src="assets/mascotas/REGALO/regalo saludando.webp" alt="Mascota Bicho Capricho" width="90" height="90" loading="lazy">
           </div>
@@ -126,6 +129,11 @@
         <div id="recien-agregado-section" style="display:none; margin-bottom:24px;">
           <h3 style="font-family:'Fredoka',sans-serif; font-size:18px; margin-bottom:12px;">🆕 Recién agregado</h3>
           <div id="recien-agregado-list" style="display:flex; gap:14px; overflow-x:auto; padding-bottom:8px;"></div>
+        </div>
+
+        <div id="vistos-section" style="display:none; margin-bottom:24px;">
+          <h3 style="font-family:'Fredoka',sans-serif; font-size:18px; margin-bottom:12px;">Vistos recientemente</h3>
+          <div id="vistos-list" style="display:flex; gap:14px; overflow-x:auto; padding-bottom:8px;"></div>
         </div>
 
         <div class="search-container">
@@ -394,6 +402,7 @@
           <button class="pm-arrow pm-prev" id="pm-prev" aria-label="Anterior">‹</button>
           <button class="pm-arrow pm-next" id="pm-next" aria-label="Siguiente">›</button>
           <div class="pm-dots" id="pm-dots"></div>
+          <div class="pm-thumbs" id="pm-thumbs" aria-label="Miniaturas del producto"></div>
         </div>
         <!-- Detalles -->
         <div class="p-modal-info">
@@ -402,6 +411,7 @@
             <button type="button" class="pm-share-btn" id="pm-share-btn" aria-label="Compartir producto" title="Compartir">↗ Compartir</button>
           </div>
           <h3 class="pm-title" id="pm-title">Nombre Producto</h3>
+          <div class="pm-selected-meta" id="pm-selected-meta" hidden></div>
           <div class="pm-variants" id="pm-variants-container" hidden></div>
           <p class="pm-desc" id="pm-desc">Descripción larga...</p>
           
