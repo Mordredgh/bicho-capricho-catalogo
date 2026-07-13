@@ -650,6 +650,43 @@ if (searchClear) {
 let modalImages = [];
 let currentImageIndex = 0;
 
+function buildProductImages(product) {
+  const images = [];
+  if (product.mainImage) images.push(product.mainImage);
+  if (product.galleryImages && product.galleryImages.length > 0) images.push(...product.galleryImages);
+  return [...new Set(images.filter(src => typeof src === 'string' && src.trim()))];
+}
+
+function colorToCss(color) {
+  const key = String(color || '').trim().toLowerCase();
+  const map = {
+    arena: '#e9dcc2',
+    blanco: '#ffffff',
+    'gris jaspe': '#9aa39a',
+    jade: '#009b78',
+    marino: '#17375e',
+    negro: '#050505',
+    rojo: '#d83b3b',
+    'rosa pastel': '#f4b9cf',
+    royal: '#3769d8'
+  };
+  return map[key] || color || '#ffffff';
+}
+
+function colorLabel(color, index) {
+  const value = String(color || '').trim();
+  return /^#[0-9a-f]{6}$/i.test(value) ? `Color ${index + 1}` : value;
+}
+
+function buildColorImagePairs(product) {
+  const colors = Array.isArray(product.colors) ? product.colors : [];
+  if (!colors.length) return [];
+  return colors.map((color, index) => ({
+    color,
+    image: index === 0 ? product.mainImage : (product.galleryImages || [])[index - 1]
+  })).filter(item => item.image);
+}
+
 function openProductModal(product) {
   const modal = document.getElementById('p-modal-overlay');
   
@@ -658,18 +695,38 @@ function openProductModal(product) {
   const variantsContainer = document.getElementById('pm-variants-container');
   if (variantsContainer) {
     const variants = Array.isArray(product.variants) ? product.variants : [];
-    variantsContainer.hidden = variants.length < 2;
-    variantsContainer.innerHTML = variants.length > 1
-      ? `<span class="pm-variants-label">Elige el corte:</span><div class="pm-variants-list">${variants.map(variant => {
+    const colorPairs = buildColorImagePairs(product);
+    variantsContainer.hidden = variants.length < 2 && colorPairs.length < 2;
+    const cortesHTML = variants.length > 1
+      ? `<span class="pm-variants-label">Elige el corte:</span><div class="pm-variants-list pm-cut-list">${variants.map(variant => {
           const label = variant.name.split(/\s-\s/).pop();
           const active = variant.id === product.id ? ' active' : '';
           return `<button type="button" class="pm-variant-btn${active}" data-variant-id="${esc(variant.id || '')}">${esc(label)}</button>`;
         }).join('')}</div>`
       : '';
+    const coloresHTML = colorPairs.length > 1
+      ? `<span class="pm-variants-label">Elige el color:</span><div class="pm-variants-list pm-color-list">${colorPairs.map((item, index) => `
+          <button type="button" class="pm-color-btn${index === 0 ? ' active' : ''}" data-color-index="${index}" title="${esc(colorLabel(item.color, index))}">
+            <span style="background:${esc(colorToCss(item.color))}"></span>${esc(colorLabel(item.color, index))}
+          </button>
+        `).join('')}</div>`
+      : '';
+    variantsContainer.innerHTML = `${cortesHTML}${coloresHTML}`;
     variantsContainer.querySelectorAll('[data-variant-id]').forEach(button => {
       button.addEventListener('click', () => {
         const variant = variants.find(item => item.id === button.dataset.variantId);
         if (variant) openProductModal({ ...variant, variants });
+      });
+    });
+    variantsContainer.querySelectorAll('[data-color-index]').forEach(button => {
+      button.addEventListener('click', () => {
+        const pair = colorPairs[Number(button.dataset.colorIndex)];
+        const targetIndex = modalImages.indexOf(pair && pair.image);
+        if (targetIndex < 0) return;
+        currentImageIndex = targetIndex;
+        variantsContainer.querySelectorAll('.pm-color-btn').forEach(b => b.classList.remove('active'));
+        button.classList.add('active');
+        updateCarouselPos();
       });
     });
   }
@@ -921,14 +978,10 @@ function openProductModal(product) {
     };
   }
 
-  modalImages = [];
-  if (product.mainImage) modalImages.push(product.mainImage);
-  if (product.galleryImages && product.galleryImages.length > 0) {
-    modalImages = modalImages.concat(product.galleryImages);
-  }
+  modalImages = buildProductImages(product);
 
   if (modalImages.length === 0) {
-    modalImages = ['assets/favicon-180.png'];
+    modalImages = ['assets/logo-bicho-capricho.webp'];
   }
 
   currentImageIndex = 0;
@@ -948,6 +1001,13 @@ function renderModalCarousel() {
   const dotsContainer = document.getElementById('pm-dots');
 
   carousel.innerHTML = modalImages.map((src, i) => `<img src="${src}" class="pm-carousel-img" alt="${esc(currentModalProductName)}${modalImages.length > 1 ? ` — foto ${i + 1} de ${modalImages.length}` : ''}" ${i === 0 ? '' : 'loading="lazy"'} onload="this.classList.add('loaded')">`).join('');
+  carousel.querySelectorAll('img').forEach(img => {
+    if (img.complete && img.naturalWidth > 0) img.classList.add('loaded');
+    img.addEventListener('error', () => {
+      img.src = 'assets/logo-bicho-capricho.webp';
+      img.classList.add('loaded');
+    }, { once: true });
+  });
   
   if (modalImages.length > 1) {
     dotsContainer.innerHTML = modalImages.map((_, i) => `<div class="pm-dot ${i === 0 ? 'active' : ''}"></div>`).join('');

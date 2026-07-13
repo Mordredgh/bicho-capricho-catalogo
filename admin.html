@@ -333,6 +333,54 @@
     }
     .product-table tr:last-child td { border-bottom: 0; }
     .product-table tr:hover td { background: #f0f8f2; }
+    .product-table tr.group-row td {
+      background: #fbf8ef;
+      border-bottom: 1px solid rgba(28,79,50,.16);
+    }
+    .product-table tr.group-row:hover td { background: #f4efdf; }
+    .product-table tr.group-child td {
+      background: rgba(248,244,236,.52);
+      font-size: 12px;
+      color: #536d60;
+      padding-top: 10px;
+      padding-bottom: 10px;
+    }
+    .product-table tr.group-child td:first-child { border-left: 6px solid rgba(150,105,196,.34); }
+    .group-title {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .group-title strong { font-family:'Fredoka',sans-serif; color:var(--forest); font-size:16px; }
+    .group-count-pill {
+      display:inline-flex;
+      align-items:center;
+      gap:5px;
+      padding:4px 9px;
+      border-radius:999px;
+      background:rgba(223,191,255,.42);
+      color:var(--grape);
+      font-size:11px;
+      font-weight:900;
+    }
+    .group-meta {
+      display:block;
+      margin-top:4px;
+      color:var(--olive);
+      font-size:11px;
+      font-weight:800;
+    }
+    .group-expand-btn {
+      border:2px solid var(--forest);
+      background:var(--white);
+      color:var(--forest);
+      border-radius:999px;
+      padding:5px 10px;
+      cursor:pointer;
+      font:900 11px 'Nunito';
+    }
+    .group-expand-btn:hover { background:var(--forest); color:var(--white); }
     .cat-pill {
       display: inline-block;
       padding: 3px 10px;
@@ -2302,6 +2350,8 @@
   let currentAdminFilter = 'todos';
   let currentAdminSearch = '';
   let currentAdminSpecialFilter = null;
+  let expandedAdminGroups = new Set();
+  let adminRenderedGroups = new Map();
 
   function renderPendingChips(allList) {
     const el = document.getElementById('pending-chips');
@@ -2328,6 +2378,95 @@
     renderTable();
   }
   window.togglePendingFilter = togglePendingFilter;
+
+  function stripVariantSuffix(name) {
+    return String(name || '').replace(/\s-\s(Hombre|Mujer|Juvenil|Niños|Ninos)$/i, '').trim();
+  }
+
+  function getColeccionLabel(id) {
+    const c = _colecciones.find(x => x.id === id);
+    return c ? `${c.emoji || '🎬'} ${c.nombre}` : 'Colección';
+  }
+
+  function buildAdminRows(products) {
+    const rows = [];
+    const groups = new Map();
+    products.forEach(p => {
+      if (!p.coleccion) {
+        rows.push({ type: 'product', product: p });
+        return;
+      }
+      const baseName = p.groupDesign || stripVariantSuffix(p.name) || p.name;
+      const key = `${p.coleccion}::${baseName.toLowerCase()}`;
+      if (!groups.has(key)) {
+        groups.set(key, { type: 'group', key, name: baseName, coleccion: p.coleccion, category: p.category, products: [] });
+        rows.push(groups.get(key));
+      }
+      groups.get(key).products.push(p);
+    });
+    return rows;
+  }
+
+  function renderProductRow(p, opts = {}) {
+    const badgeLabel = {
+      nuevo:'Nuevo', oferta:'Oferta', promo:'Promo',
+      personalizado:'Personalizado', 'top-venta':'Top venta',
+      'ed-lim':'Ed. limitada', 'env-grat':'Envío gratis', agotado:'Agotado'
+    };
+    const rowClass = opts.child ? ' class="group-child"' : '';
+    const namePrefix = opts.child ? '↳ ' : '';
+    return `
+      <tr${rowClass}>
+        <td><input type="checkbox" class="bulk-row-check" data-id="${p.id}" ${bulkSelected.has(p.id) ? 'checked' : ''}></td>
+        <td class="thumb-cell"><img src="${p.mainImage || 'assets/favicon-180.png'}" alt="Thumb"></td>
+        <td><strong>${namePrefix}${esc(p.name)}</strong></td>
+        <td><span class="cat-pill cat-${p.category}">${p.category}</span></td>
+        <td>${esc(p.price)}</td>
+        <td>${p.badge ? `<span class="badge-pill">${badgeLabel[p.badge] || p.badge}</span>` : '<span class="badge-none">Sin badge</span>'}</td>
+        <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(p.desc)}">${esc(p.desc)}</td>
+        <td>
+          <button class="action-btn" title="${p.badge === 'agotado' ? 'Marcar disponible' : 'Marcar agotado'}" data-action="toggle-agotado" data-id="${p.id}">${p.badge === 'agotado' ? '✅' : '🚫'}</button>
+          <button class="action-btn" title="Duplicar" data-action="duplicate" data-id="${p.id}">📄</button>
+          <button class="action-btn" title="Editar" data-action="edit" data-id="${p.id}">✏️</button>
+          <button class="action-btn" title="Eliminar" data-action="delete" data-id="${p.id}" data-name="${esc(p.name)}">🗑️</button>
+        </td>
+      </tr>
+    `;
+  }
+
+  function renderGroupRow(group) {
+    const variants = group.products;
+    const first = variants[0];
+    const ids = variants.map(p => p.id);
+    const selected = ids.length > 0 && ids.every(id => bulkSelected.has(id));
+    const expanded = expandedAdminGroups.has(group.key);
+    const cortes = [...new Set(variants.map(p => (p.name.match(/\s-\s(.+)$/) || [])[1]).filter(Boolean))].join(', ');
+    const colors = variants.reduce((sum, p) => sum + (Array.isArray(p.colors) ? p.colors.length : 0), 0);
+    adminRenderedGroups.set(group.key, group);
+    return `
+      <tr class="group-row">
+        <td><input type="checkbox" class="bulk-group-check" data-group-key="${esc(group.key)}" ${selected ? 'checked' : ''}></td>
+        <td class="thumb-cell"><img src="${first.mainImage || 'assets/favicon-180.png'}" alt="Thumb"></td>
+        <td>
+          <div class="group-title">
+            <strong>${esc(group.name)}</strong>
+            <span class="group-count-pill">${variants.length} variantes</span>
+          </div>
+          <span class="group-meta">${esc(getColeccionLabel(group.coleccion))}${cortes ? ` · ${esc(cortes)}` : ''}</span>
+        </td>
+        <td><span class="cat-pill cat-${group.category}">${group.category}</span></td>
+        <td>Consultar</td>
+        <td><span class="badge-pill">${colors} colores</span></td>
+        <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(first.desc)}">${esc(first.desc)}</td>
+        <td>
+          <button class="group-expand-btn" data-action="toggle-group" data-group-key="${esc(group.key)}">${expanded ? 'Ocultar' : 'Ver'} ${variants.length}</button>
+          <button class="action-btn" title="Editar primera variante" data-action="edit" data-id="${first.id}">✏️</button>
+          <button class="action-btn" title="Eliminar grupo completo" data-action="delete-group" data-group-key="${esc(group.key)}">🗑️</button>
+        </td>
+      </tr>
+      ${expanded ? variants.map(p => renderProductRow(p, { child: true })).join('') : ''}
+    `;
+  }
 
   async function renderTable() {
     const tbody = document.getElementById('products-tbody');
@@ -2366,34 +2505,25 @@
       return;
     }
 
-    const badgeLabel = {
-      nuevo:'Nuevo', oferta:'Oferta', promo:'Promo',
-      personalizado:'Personalizado', 'top-venta':'Top venta',
-      'ed-lim':'Ed. limitada', 'env-grat':'Envío gratis', agotado:'Agotado'
-    };
-
-    tbody.innerHTML = displayList.map(p => `
-      <tr>
-        <td><input type="checkbox" class="bulk-row-check" data-id="${p.id}" ${bulkSelected.has(p.id) ? 'checked' : ''}></td>
-        <td class="thumb-cell"><img src="${p.mainImage || 'assets/favicon-180.png'}" alt="Thumb"></td>
-        <td><strong>${esc(p.name)}</strong></td>
-        <td><span class="cat-pill cat-${p.category}">${p.category}</span></td>
-        <td>${esc(p.price)}</td>
-        <td>${p.badge ? `<span class="badge-pill">${badgeLabel[p.badge] || p.badge}</span>` : '<span class="badge-none">Sin badge</span>'}</td>
-        <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(p.desc)}">${esc(p.desc)}</td>
-        <td>
-          <button class="action-btn" title="${p.badge === 'agotado' ? 'Marcar disponible' : 'Marcar agotado'}" data-action="toggle-agotado" data-id="${p.id}">${p.badge === 'agotado' ? '✅' : '🚫'}</button>
-          <button class="action-btn" title="Duplicar" data-action="duplicate" data-id="${p.id}">📄</button>
-          <button class="action-btn" title="Editar" data-action="edit" data-id="${p.id}">✏️</button>
-          <button class="action-btn" title="Eliminar" data-action="delete" data-id="${p.id}" data-name="${esc(p.name)}">🗑️</button>
-        </td>
-      </tr>
-    `).join('');
+    adminRenderedGroups = new Map();
+    tbody.innerHTML = buildAdminRows(displayList).map(row => (
+      row.type === 'group' ? renderGroupRow(row) : renderProductRow(row.product)
+    )).join('');
 
     tbody.querySelectorAll('.bulk-row-check').forEach(cb => {
       cb.addEventListener('change', () => {
         if (cb.checked) bulkSelected.add(cb.dataset.id); else bulkSelected.delete(cb.dataset.id);
         renderBulkBar();
+      });
+    });
+    tbody.querySelectorAll('.bulk-group-check').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const group = adminRenderedGroups.get(cb.dataset.groupKey);
+        if (!group) return;
+        group.products.forEach(p => {
+          if (cb.checked) bulkSelected.add(p.id); else bulkSelected.delete(p.id);
+        });
+        renderTable();
       });
     });
     renderBulkBar();
@@ -2456,49 +2586,74 @@
   async function bulkDelete() {
     if (!bulkSelected.size) return;
     const ids = Array.from(bulkSelected);
-    scheduleUndoableDelete(ids, `${ids.length} producto(s) eliminados`);
     bulkSelected.clear();
-    await renderTable();
+    await scheduleUndoableDelete(ids, `${ids.length} producto(s) eliminados`);
   }
   window.bulkDelete = bulkDelete;
 
   // ── Eliminar con "Deshacer" (5 seg antes de borrar de verdad) ──
   let pendingDeleteIds = new Set();
   let undoTimer = null;
+  let undoRestoreRows = [];
 
-  function scheduleUndoableDelete(ids, label) {
-    ids.forEach(id => pendingDeleteIds.add(id));
+  async function scheduleUndoableDelete(ids, label) {
+    const uniqueIds = [...new Set(ids)];
+    const currentProducts = getProducts();
+    undoRestoreRows = uniqueIds
+      .map(id => currentProducts.find(p => p.id === id))
+      .filter(Boolean)
+      .map(p => ({ id: p.id, ...toRow(p) }));
+
+    uniqueIds.forEach(id => pendingDeleteIds.add(id));
     const textEl = document.getElementById('undo-toast-text');
     const toastEl = document.getElementById('undo-toast');
     textEl.textContent = `🗑️ ${label}`;
     toastEl.classList.add('show');
     if (undoTimer) clearTimeout(undoTimer);
-    undoTimer = setTimeout(async () => {
+
+    await renderTable();
+
+    const failed = [];
+    for (const id of uniqueIds) {
+      try {
+        await supaAdmin('DELETE', 'catalogo_productos', null, `?id=eq.${id}`);
+      } catch (e) {
+        failed.push(id);
+        console.warn(e.message);
+      }
+      pendingDeleteIds.delete(id);
+    }
+
+    if (failed.length) {
+      undoRestoreRows = undoRestoreRows.filter(row => !failed.includes(row.id));
+      showToast(`❌ ${failed.length} producto(s) no se pudieron eliminar. Revisa permisos de Supabase.`);
+    }
+    await renderTable();
+
+    undoTimer = setTimeout(() => {
       toastEl.classList.remove('show');
-      const failed = [];
-      for (const id of ids) {
-        try {
-          await supaAdmin('DELETE', 'catalogo_productos', null, `?id=eq.${id}`);
-        } catch (e) {
-          failed.push(id);
-          console.warn(e.message);
-        }
-        pendingDeleteIds.delete(id);
-      }
       if (failed.length) {
-        showToast(`❌ ${failed.length} producto(s) no se pudieron eliminar. Se restauraron en la tabla.`);
-      } else {
-        showToast(`✅ ${ids.length} producto(s) eliminados definitivamente`);
+        showToast(`✅ ${uniqueIds.length - failed.length} producto(s) eliminados definitivamente`);
+      } else if (uniqueIds.length) {
+        showToast(`✅ ${uniqueIds.length} producto(s) eliminados definitivamente`);
       }
-      await renderTable();
+      undoRestoreRows = [];
     }, 5000);
   }
 
-  document.getElementById('undo-toast-btn').addEventListener('click', () => {
+  document.getElementById('undo-toast-btn').addEventListener('click', async () => {
     if (undoTimer) clearTimeout(undoTimer);
+    if (undoRestoreRows.length) {
+      const { error } = await sbClient.from('catalogo_productos').upsert(undoRestoreRows);
+      if (error) {
+        showToast(`❌ No se pudo deshacer: ${error.message}`);
+        return;
+      }
+    }
+    undoRestoreRows = [];
     pendingDeleteIds.clear();
     document.getElementById('undo-toast').classList.remove('show');
-    renderTable();
+    await renderTable();
     showToast('↩️ Eliminación deshecha');
   });
 
@@ -2554,6 +2709,19 @@
   document.getElementById('products-tbody').addEventListener('click', (e) => {
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
+    if (btn.dataset.action === 'toggle-group') {
+      const key = btn.dataset.groupKey;
+      if (expandedAdminGroups.has(key)) expandedAdminGroups.delete(key);
+      else expandedAdminGroups.add(key);
+      renderTable();
+      return;
+    }
+    if (btn.dataset.action === 'delete-group') {
+      const group = adminRenderedGroups.get(btn.dataset.groupKey);
+      if (!group) return;
+      scheduleUndoableDelete(group.products.map(p => p.id), `${group.products.length} variantes de ${group.name}`);
+      return;
+    }
     if (btn.dataset.action === 'edit') editProduct(btn.dataset.id);
     if (btn.dataset.action === 'delete') askDelete(btn.dataset.id, btn.dataset.name);
     if (btn.dataset.action === 'toggle-agotado') toggleAgotado(btn.dataset.id);
@@ -2921,8 +3089,7 @@
     if (!deleteId) return;
     const id = deleteId;
     closeConfirm();
-    scheduleUndoableDelete([id], 'Producto eliminado');
-    await renderTable();
+    await scheduleUndoableDelete([id], 'Producto eliminado');
   });
 
   // ── WHATSAPP ──────────────────────────────────────
