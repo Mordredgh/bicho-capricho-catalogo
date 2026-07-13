@@ -12,11 +12,26 @@ alter table public.catalogo_mockups enable row level security;
 
 -- Evita acumulacion de politicas permisivas antiguas.
 drop policy if exists "Public read categories" on public.categories;
+drop policy if exists "allow_all_categories" on public.categories;
 drop policy if exists "Public read visible catalog products" on public.catalogo_productos;
 drop policy if exists "Admin full catalog products" on public.catalogo_productos;
+drop policy if exists "Admin catalogo actualiza" on public.catalogo_productos;
+drop policy if exists "Admin catalogo borra" on public.catalogo_productos;
+drop policy if exists "Admin catalogo inserta" on public.catalogo_productos;
+drop policy if exists "Admin catalogo lee todo" on public.catalogo_productos;
+drop policy if exists "Public read catalogo_productos" on public.catalogo_productos;
 drop policy if exists "Public read visible collections" on public.catalogo_colecciones;
 drop policy if exists "Admin full collections" on public.catalogo_colecciones;
+drop policy if exists "Admin colecciones actualiza" on public.catalogo_colecciones;
+drop policy if exists "Admin colecciones borra" on public.catalogo_colecciones;
+drop policy if exists "Admin colecciones inserta" on public.catalogo_colecciones;
+drop policy if exists "Admin colecciones lee todo" on public.catalogo_colecciones;
+drop policy if exists "Public read colecciones activas" on public.catalogo_colecciones;
 drop policy if exists "Admin full mockups" on public.catalogo_mockups;
+drop policy if exists "Admin catalogo mockups actualiza" on public.catalogo_mockups;
+drop policy if exists "Admin catalogo mockups borra" on public.catalogo_mockups;
+drop policy if exists "Admin catalogo mockups inserta" on public.catalogo_mockups;
+drop policy if exists "Admin catalogo mockups lee todo" on public.catalogo_mockups;
 
 -- Categories: lectura publica; no se gestionan desde este admin.
 create policy "Public read categories"
@@ -75,6 +90,9 @@ drop policy if exists "Block anon insert bc-catalogo" on storage.objects;
 drop policy if exists "Admin insert bc-catalogo" on storage.objects;
 drop policy if exists "Admin update bc-catalogo" on storage.objects;
 drop policy if exists "Admin delete bc-catalogo" on storage.objects;
+drop policy if exists "Admin catalogo storage insert" on storage.objects;
+drop policy if exists "Admin catalogo storage update" on storage.objects;
+drop policy if exists "Admin catalogo storage delete" on storage.objects;
 
 create policy "Public read bc-catalogo"
   on storage.objects
