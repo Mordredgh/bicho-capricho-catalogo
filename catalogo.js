@@ -882,12 +882,29 @@ function setupModalImageZoom() {
   carousel.onmouseleave = clearZoom;
 }
 
+function clearModalImageZoomHandlers() {
+  const carousel = document.getElementById('pm-carousel');
+  if (!carousel) return;
+  carousel.onmousemove = null;
+  carousel.onmouseleave = null;
+}
+
+function setProductModalVisibility(isVisible) {
+  const overlay = document.getElementById('p-modal-overlay');
+  if (!overlay) return;
+  overlay.hidden = !isVisible;
+  overlay.inert = !isVisible;
+  overlay.setAttribute('aria-hidden', isVisible ? 'false' : 'true');
+  overlay.style.pointerEvents = isVisible ? '' : 'none';
+}
+
 function openProductModal(product) {
   const modal = document.getElementById('p-modal-overlay');
   if (productModalCloseTimer) {
     clearTimeout(productModalCloseTimer);
     productModalCloseTimer = null;
   }
+  setProductModalVisibility(true);
   resetModalImageZoom();
   modal.classList.remove('closing');
   document.body.classList.add('product-modal-open');
@@ -1308,12 +1325,16 @@ function closeProductModal() {
   const overlay = document.getElementById('p-modal-overlay');
   if (!overlay || !overlay.classList.contains('open') || overlay.classList.contains('closing')) return;
   resetModalImageZoom();
+  clearModalImageZoomHandlers();
+  overlay.style.pointerEvents = 'none';
   overlay.classList.add('closing');
   productModalCloseTimer = setTimeout(() => {
     overlay.classList.remove('open', 'closing');
+    setProductModalVisibility(false);
     document.body.classList.remove('product-modal-open');
     productModalCloseTimer = null;
     resetModalImageZoom();
+    clearModalImageZoomHandlers();
     if (modalTriggerEl && typeof modalTriggerEl.focus === 'function') modalTriggerEl.focus();
   }, 90);
 }

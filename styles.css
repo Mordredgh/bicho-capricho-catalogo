@@ -586,6 +586,7 @@ footer{background:var(--forest);color:var(--cream);padding:80px 0 25px}.footer-m
 .p-modal-overlay.open { opacity: 1; pointer-events: all; }
 .p-modal-overlay.closing { pointer-events: none !important; }
 body:not(.product-modal-open) .p-modal-overlay { pointer-events: none !important; }
+.p-modal-overlay[hidden] { display: none !important; pointer-events: none !important; }
 .p-modal {
   background: var(--cream);
   border: 2px solid var(--forest);
@@ -2852,6 +2853,14 @@ body:not(.product-modal-open) .p-modal-overlay { pointer-events: none !important
 }
 .p-modal-overlay.open .p-modal {
   transform: translateY(0) scale(1) !important;
+}
+.p-modal-overlay:not(.open):not(.closing),
+.p-modal-overlay[aria-hidden="true"] {
+  pointer-events: none !important;
+}
+.p-modal-overlay[hidden] {
+  display: none !important;
+  pointer-events: none !important;
 }
 .notebook-spiral {
   display: none !important;
