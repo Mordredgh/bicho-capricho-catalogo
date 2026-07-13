@@ -1870,6 +1870,12 @@
   }
   window.setDesignManualValue = setDesignManualValue;
 
+  function commitDesignInput(input, localId, key) {
+    setDesignManualValue(localId, key, input.value);
+    input.blur();
+  }
+  window.commitDesignInput = commitDesignInput;
+
   function nudgeDesignValue(localId, key, deltaPct) {
     const d = _pendingDesigns.find(x => x.localId === localId);
     if (!d) return;
@@ -1929,9 +1935,9 @@
     const offsetX = d.offsetX ?? 0.5;
     if (scaleTxt) scaleTxt.textContent = Math.round(d.scale * 100) + '%';
     if (offsetTxt) offsetTxt.textContent = `${Math.round(offsetX * 100)}% / ${Math.round(d.offsetY * 100)}%`;
-    if (scaleInput) scaleInput.value = Math.round(d.scale * 100);
-    if (offsetXInput) offsetXInput.value = Math.round(offsetX * 100);
-    if (offsetYInput) offsetYInput.value = Math.round(d.offsetY * 100);
+    if (scaleInput && document.activeElement !== scaleInput) scaleInput.value = Math.round(d.scale * 100);
+    if (offsetXInput && document.activeElement !== offsetXInput) offsetXInput.value = Math.round(offsetX * 100);
+    if (offsetYInput && document.activeElement !== offsetYInput) offsetYInput.value = Math.round(d.offsetY * 100);
   }
 
   function canvasPoint(canvas, e) {
@@ -2031,15 +2037,15 @@
             <div class="design-manual-controls">
               <div class="design-control">
                 <label for="design-scale-input-${d.localId}">Tamaño %</label>
-                <input id="design-scale-input-${d.localId}" type="number" min="8" max="120" step="1" value="${Math.round(d.scale * 100)}" onchange="setDesignManualValue('${d.localId}', 'scale', this.value)" oninput="setDesignManualValue('${d.localId}', 'scale', this.value)">
+                <input id="design-scale-input-${d.localId}" type="number" min="8" max="120" step="1" value="${Math.round(d.scale * 100)}" onchange="setDesignManualValue('${d.localId}', 'scale', this.value)" onkeydown="if(event.key === 'Enter') commitDesignInput(this, '${d.localId}', 'scale')">
               </div>
               <div class="design-control">
                 <label for="design-offset-x-input-${d.localId}">X centro %</label>
-                <input id="design-offset-x-input-${d.localId}" type="number" min="0" max="100" step="1" value="${Math.round((d.offsetX ?? 0.5) * 100)}" onchange="setDesignManualValue('${d.localId}', 'offsetX', this.value)" oninput="setDesignManualValue('${d.localId}', 'offsetX', this.value)">
+                <input id="design-offset-x-input-${d.localId}" type="number" min="0" max="100" step="1" value="${Math.round((d.offsetX ?? 0.5) * 100)}" onchange="setDesignManualValue('${d.localId}', 'offsetX', this.value)" onkeydown="if(event.key === 'Enter') commitDesignInput(this, '${d.localId}', 'offsetX')">
               </div>
               <div class="design-control">
                 <label for="design-offset-y-input-${d.localId}">Y arriba %</label>
-                <input id="design-offset-y-input-${d.localId}" type="number" min="0" max="90" step="1" value="${Math.round(d.offsetY * 100)}" onchange="setDesignManualValue('${d.localId}', 'offsetY', this.value)" oninput="setDesignManualValue('${d.localId}', 'offsetY', this.value)">
+                <input id="design-offset-y-input-${d.localId}" type="number" min="0" max="90" step="1" value="${Math.round(d.offsetY * 100)}" onchange="setDesignManualValue('${d.localId}', 'offsetY', this.value)" onkeydown="if(event.key === 'Enter') commitDesignInput(this, '${d.localId}', 'offsetY')">
               </div>
             </div>
             <div class="design-quick-actions">
