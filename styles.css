@@ -499,7 +499,7 @@ footer{background:var(--forest);color:var(--cream);padding:80px 0 25px}.footer-m
   padding: 24px;
   box-sizing: border-box;
   mix-blend-mode: multiply;
-  opacity: 0;
+  opacity: 1;
   transition: opacity .25s ease;
 }
 .pm-carousel-img.loaded { opacity: 1; }
@@ -2755,13 +2755,13 @@ footer{background:var(--forest);color:var(--cream);padding:80px 0 25px}.footer-m
   position: absolute;
   left: 30px;
   top: 26px;
-  width: 145px;
-  height: 42px;
+  width: 220px;
+  height: 62px;
   background: url("assets/logo-bicho-capricho.webp") left center / contain no-repeat;
-  opacity: .52;
+  opacity: .72;
 }
 .pm-carousel-img {
-  padding: clamp(36px, 5vw, 70px) !important;
+  padding: clamp(12px, 2.5vw, 32px) !important;
   mix-blend-mode: normal !important;
   filter: drop-shadow(0 28px 34px rgba(28, 79, 50, .18));
 }

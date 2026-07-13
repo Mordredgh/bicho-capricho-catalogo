@@ -1335,6 +1335,81 @@
   </div>
 </div>
 
+<!-- ════════ MODAL DISEÑO DE COLECCIÓN (edita variantes en bloque) ════════ -->
+<div class="modal-overlay" id="collection-design-modal-overlay" onclick="closeCollectionDesignModalOutside(event)">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="collection-design-modal-title">
+    <div class="modal-header">
+      <h3 id="collection-design-modal-title">Editar diseño de colección</h3>
+      <button class="modal-close" onclick="closeCollectionDesignModal()" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="collection-design-form" onsubmit="saveCollectionDesign(event)" novalidate style="width:100%;">
+        <input type="hidden" id="cdf-group-key">
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>Nombre del diseño *</label>
+            <input type="text" id="cdf-design-name" required placeholder="Ej: Buzz">
+          </div>
+          <div class="form-group">
+            <label>Colección</label>
+            <select id="cdf-coleccion"></select>
+          </div>
+          <div class="form-group">
+            <label>Categoría</label>
+            <select id="cdf-category"></select>
+          </div>
+          <div class="form-group">
+            <label>Guía de medidas</label>
+            <select id="cdf-size-guide">
+              <option value="none">Sin guía</option>
+              <option value="playera">Playera (Tallas CH - EG)</option>
+              <option value="sudadera">Sudadera (Tallas CH - EG)</option>
+              <option value="taza">Taza / Termo</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Precio visible</label>
+            <input type="text" id="cdf-price" placeholder="Consultar">
+          </div>
+          <div class="form-group">
+            <label>Precio mín.</label>
+            <input type="number" id="cdf-price-min" min="0" step="1">
+          </div>
+          <div class="form-group">
+            <label>Precio máx.</label>
+            <input type="number" id="cdf-price-max" min="0" step="1">
+          </div>
+          <div class="form-group">
+            <label>Estampado desde ($)</label>
+            <input type="number" id="cdf-precio-estampado" min="0" step="1">
+          </div>
+          <div class="form-group">
+            <label>Badge</label>
+            <select id="cdf-badge">
+              <option value="">Sin badge</option>
+              <option value="nuevo">Nuevo</option>
+              <option value="personalizado">Personalizado</option>
+              <option value="top-venta">Top venta</option>
+              <option value="ed-lim">Edición limitada</option>
+              <option value="env-grat">Envío gratis</option>
+              <option value="agotado">Agotado</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label>Descripción base</label>
+            <textarea id="cdf-desc" placeholder="Descripción del diseño. Se ajustará por corte automáticamente."></textarea>
+          </div>
+        </div>
+        <p id="cdf-variant-summary" style="font-size:12px;color:var(--olive);font-weight:800;margin:12px 0 0;"></p>
+        <div class="form-actions">
+          <button type="button" class="btn-cancel" onclick="closeCollectionDesignModal()">Cancelar</button>
+          <button type="submit" class="btn-save">Actualizar variantes ✦</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <!-- ════════ MODAL COLECCIÓN (separado del de producto) ════════ -->
 <div class="modal-overlay" id="coleccion-modal-overlay" onclick="closeColeccionModalOutside(event)">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="coleccion-modal-title">
@@ -2211,6 +2286,94 @@
   }
   window.deleteColeccion = deleteColeccion;
 
+  function renderCollectionDesignModalSelects() {
+    const colSel = document.getElementById('cdf-coleccion');
+    const catSel = document.getElementById('cdf-category');
+    if (colSel) {
+      colSel.innerHTML = _colecciones.map(c => `<option value="${c.id}">${c.emoji || '🎬'} ${esc(c.nombre)}</option>`).join('');
+    }
+    if (catSel) {
+      const source = document.getElementById('f-category');
+      catSel.innerHTML = source ? source.innerHTML : '<option value="textil">Textil</option>';
+    }
+  }
+
+  function openCollectionDesignModal(groupKey) {
+    const group = getCollectionDesignGroup(groupKey);
+    if (!group) {
+      showToast('⚠️ No encontré ese diseño de colección');
+      return;
+    }
+    const first = group.products[0];
+    renderCollectionDesignModalSelects();
+    document.getElementById('cdf-group-key').value = group.key;
+    document.getElementById('cdf-design-name').value = group.name;
+    document.getElementById('cdf-coleccion').value = group.coleccion || '';
+    document.getElementById('cdf-category').value = first.category || 'textil';
+    document.getElementById('cdf-size-guide').value = first.sizeGuide || 'playera';
+    document.getElementById('cdf-price').value = first.price || 'Consultar';
+    document.getElementById('cdf-price-min').value = first.priceMin || '';
+    document.getElementById('cdf-price-max').value = first.priceMax || '';
+    document.getElementById('cdf-precio-estampado').value = first.precioEstampadoDesde || '';
+    document.getElementById('cdf-badge').value = first.badge || '';
+    document.getElementById('cdf-desc').value = first.desc || '';
+    document.getElementById('cdf-variant-summary').textContent = `${group.products.length} variantes: ${group.products.map(p => getCutFromName(p.name)).filter(Boolean).join(', ')}`;
+    document.getElementById('collection-design-modal-overlay').classList.add('open');
+  }
+  window.openCollectionDesignModal = openCollectionDesignModal;
+
+  function closeCollectionDesignModal() {
+    document.getElementById('collection-design-modal-overlay').classList.remove('open');
+  }
+  window.closeCollectionDesignModal = closeCollectionDesignModal;
+
+  function closeCollectionDesignModalOutside(e) {
+    if (e.target === document.getElementById('collection-design-modal-overlay')) closeCollectionDesignModal();
+  }
+  window.closeCollectionDesignModalOutside = closeCollectionDesignModalOutside;
+
+  async function saveCollectionDesign(e) {
+    e.preventDefault();
+    const group = getCollectionDesignGroup(document.getElementById('cdf-group-key').value);
+    if (!group) return;
+    const designName = document.getElementById('cdf-design-name').value.trim();
+    if (!designName) {
+      showToast('⚠️ Escribe el nombre del diseño');
+      return;
+    }
+    const coleccion = document.getElementById('cdf-coleccion').value;
+    const category = document.getElementById('cdf-category').value;
+    const sizeGuide = document.getElementById('cdf-size-guide').value;
+    const price = document.getElementById('cdf-price').value.trim() || 'Consultar';
+    const priceMin = document.getElementById('cdf-price-min').value;
+    const priceMax = document.getElementById('cdf-price-max').value;
+    const precioEstampado = document.getElementById('cdf-precio-estampado').value;
+    const badge = document.getElementById('cdf-badge').value;
+    const descBase = document.getElementById('cdf-desc').value.trim();
+
+    for (const product of group.products) {
+      const cut = getCutFromName(product.name);
+      const row = {
+        nombre: cut ? `${designName} - ${cut}` : designName,
+        grupo_diseno: designName,
+        coleccion,
+        cat: category,
+        size_guide: sizeGuide,
+        precio: price,
+        price_min: priceMin === '' ? null : Number(priceMin),
+        price_max: priceMax === '' ? null : Number(priceMax),
+        precio_estampado_desde: precioEstampado === '' ? null : Number(precioEstampado),
+        badge,
+        descripcion: descBase || `Diseño ${designName}${cut ? `, corte ${cut}` : ''}.`
+      };
+      await supaAdmin('PATCH', 'catalogo_productos', row, `?id=eq.${product.id}`);
+    }
+    closeCollectionDesignModal();
+    showToast(`✅ Diseño "${designName}" actualizado en ${group.products.length} variantes`);
+    await renderTable();
+  }
+  window.saveCollectionDesign = saveCollectionDesign;
+
   function renderColeccionList() {
     const el = document.getElementById('coleccion-list');
     if (!el) return;
@@ -2221,8 +2384,9 @@
     const allProducts = typeof getProducts === 'function' ? getProducts() : [];
     el.innerHTML = _colecciones.map(c => {
       const productos = allProducts.filter(p => p.coleccion === c.id);
+      const grupos = buildAdminRows(productos).filter(row => row.type === 'group');
       return `
-      <div style="border:2px solid var(--forest); border-radius:12px; padding:10px 14px; ${c.activa === false ? 'opacity:.55' : ''}">
+      <div style="border:2px solid var(--forest); border-radius:16px; padding:14px; width:100%; ${c.activa === false ? 'opacity:.55' : ''}">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
           <span>${c.emoji || '🎬'} <strong>${esc(c.nombre)}</strong>${c.activa === false ? ' · oculta' : ''} <span style="font-size:11px;color:var(--olive)">(${productos.length} producto${productos.length === 1 ? '' : 's'})</span></span>
           <span>
@@ -2231,17 +2395,19 @@
             <span class="admin-swatch-remove" onclick="deleteColeccion('${c.id}')" title="Eliminar">✕</span>
           </span>
         </div>
-        ${productos.length ? `
+        ${grupos.length ? `
           <details style="margin-top:8px;">
-            <summary style="cursor:pointer; font-size:11px; color:var(--forest); font-weight:700;">Ver productos de esta colección</summary>
+            <summary style="cursor:pointer; font-size:12px; color:var(--forest); font-weight:800;">Ver diseños de esta colección</summary>
             <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
-              ${productos.map(p => `
-                <div style="display:flex; align-items:center; gap:8px; font-size:12px; border-top:1px dashed var(--forest); padding-top:6px;">
-                  <img src="${p.mainImage || 'assets/favicon-180.png'}" style="width:28px;height:28px;object-fit:cover;border-radius:6px;">
-                  <span style="flex:1;">${esc(p.name)}</span>
-                  <span>${esc(p.price)}</span>
-                  <button class="action-btn" title="Editar" data-action="edit" data-id="${p.id}">✏️</button>
-                  <button class="action-btn" title="Eliminar" data-action="delete" data-id="${p.id}" data-name="${esc(p.name)}">🗑️</button>
+              ${grupos.map(group => `
+                <div style="display:flex; align-items:center; gap:10px; font-size:12px; border-top:1px dashed var(--forest); padding-top:8px;">
+                  <img src="${group.products[0].mainImage || 'assets/favicon-180.png'}" style="width:34px;height:34px;object-fit:cover;border-radius:8px;border:1px solid var(--forest);">
+                  <span style="flex:1;">
+                    <strong>${esc(group.name)}</strong>
+                    <small style="display:block;color:var(--olive);font-weight:800;">${group.products.length} variantes · ${[...new Set(group.products.map(p => (p.name.match(/\s-\s(.+)$/) || [])[1]).filter(Boolean))].join(', ')}</small>
+                  </span>
+                  <button class="btn-save-sm" type="button" style="padding:6px 10px;" data-action="edit-collection-design" data-group-key="${esc(group.key)}">Editar diseño</button>
+                  <button class="action-btn" title="Eliminar diseño completo" data-action="delete-group" data-group-key="${esc(group.key)}">🗑️</button>
                 </div>
               `).join('')}
             </div>
@@ -2413,6 +2579,14 @@
     return rows;
   }
 
+  function getCollectionDesignGroup(groupKey) {
+    return buildAdminRows(getProducts().filter(p => p.coleccion)).find(row => row.type === 'group' && row.key === groupKey);
+  }
+
+  function getCutFromName(name) {
+    return (String(name || '').match(/\s-\s(.+)$/) || [])[1] || '';
+  }
+
   function renderProductRow(p, opts = {}) {
     const badgeLabel = {
       nuevo:'Nuevo', oferta:'Oferta', promo:'Promo',
@@ -2491,7 +2665,7 @@
     renderColeccionList();
     renderPendingChips(allList);
 
-    let displayList = allList;
+    let displayList = allList.filter(p => !p.coleccion);
     if (currentAdminFilter !== 'todos') {
       displayList = displayList.filter(p => p.category === currentAdminFilter);
     }
@@ -2739,6 +2913,12 @@
     if (!btn) return;
     if (btn.dataset.action === 'edit') editProduct(btn.dataset.id);
     if (btn.dataset.action === 'delete') askDelete(btn.dataset.id, btn.dataset.name);
+    if (btn.dataset.action === 'edit-collection-design') openCollectionDesignModal(btn.dataset.groupKey);
+    if (btn.dataset.action === 'delete-group') {
+      const group = getCollectionDesignGroup(btn.dataset.groupKey);
+      if (!group) return;
+      scheduleUndoableDelete(group.products.map(p => p.id), `${group.products.length} variantes de ${group.name}`);
+    }
   });
 
   // ── MODAL & IMAGES ──────────────────────────────

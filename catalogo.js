@@ -675,7 +675,20 @@ function colorToCss(color) {
 
 function colorLabel(color, index) {
   const value = String(color || '').trim();
-  return /^#[0-9a-f]{6}$/i.test(value) ? `Color ${index + 1}` : value;
+  const hexNames = {
+    '#e8dcc8': 'Arena',
+    '#ffffff': 'Blanco',
+    '#9b9b9b': 'Gris Jaspe',
+    '#00a86b': 'Jade',
+    '#1b3a5c': 'Marino',
+    '#000000': 'Negro',
+    '#e63946': 'Rojo',
+    '#d32f2f': 'Rojo',
+    '#f4b6c2': 'Rosa Pastel',
+    '#f8c8dc': 'Rosa Pastel',
+    '#4169e1': 'Royal'
+  };
+  return hexNames[value.toLowerCase()] || (/^#[0-9a-f]{6}$/i.test(value) ? `Color ${index + 1}` : value);
 }
 
 function buildColorImagePairs(product) {
@@ -1000,7 +1013,7 @@ function renderModalCarousel() {
   const carousel = document.getElementById('pm-carousel');
   const dotsContainer = document.getElementById('pm-dots');
 
-  carousel.innerHTML = modalImages.map((src, i) => `<img src="${src}" class="pm-carousel-img" alt="${esc(currentModalProductName)}${modalImages.length > 1 ? ` — foto ${i + 1} de ${modalImages.length}` : ''}" ${i === 0 ? '' : 'loading="lazy"'} onload="this.classList.add('loaded')">`).join('');
+  carousel.innerHTML = modalImages.map((src, i) => `<img src="${src}" class="pm-carousel-img loaded" alt="${esc(currentModalProductName)}${modalImages.length > 1 ? ` — foto ${i + 1} de ${modalImages.length}` : ''}" decoding="async">`).join('');
   carousel.querySelectorAll('img').forEach(img => {
     if (img.complete && img.naturalWidth > 0) img.classList.add('loaded');
     img.addEventListener('error', () => {
