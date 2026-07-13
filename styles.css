@@ -2775,6 +2775,37 @@ footer{background:var(--forest);color:var(--cream);padding:80px 0 25px}.footer-m
   padding: clamp(12px, 2.5vw, 32px) !important;
   mix-blend-mode: normal !important;
   filter: drop-shadow(0 28px 34px rgba(28, 79, 50, .18));
+  cursor: zoom-in;
+  transition: transform .22s ease, opacity .25s ease, filter .22s ease;
+  will-change: transform;
+}
+.p-modal-gallery.zooming .pm-carousel-img.is-active {
+  transform: scale(1.75);
+  filter: drop-shadow(0 34px 42px rgba(28, 79, 50, .22));
+  cursor: none;
+}
+.p-modal-gallery.zooming::before {
+  border-color: rgba(28, 79, 50, .22);
+}
+.p-modal-gallery.zooming::after {
+  opacity: .32;
+}
+.pm-zoom-lens {
+  display: none;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 138px;
+  height: 138px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  border: 2px solid rgba(28, 79, 50, .72);
+  box-shadow: 0 18px 42px rgba(28, 79, 50, .22), inset 0 0 0 7px rgba(255, 253, 248, .48);
+  pointer-events: none;
+  z-index: 3;
+}
+.p-modal-gallery.zooming .pm-zoom-lens {
+  display: block;
 }
 .p-modal-gallery,
 .pm-carousel {

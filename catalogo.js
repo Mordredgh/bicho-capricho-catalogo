@@ -648,6 +648,7 @@ if (searchClear) {
 
 // ── MODAL LOGIC ──
 let modalImages = [];
+let modalColorPairs = [];
 let currentImageIndex = 0;
 
 function buildProductImages(product) {
@@ -694,10 +695,58 @@ function colorLabel(color, index) {
 function buildColorImagePairs(product) {
   const colors = Array.isArray(product.colors) ? product.colors : [];
   if (!colors.length) return [];
+  const images = buildProductImages(product);
   return colors.map((color, index) => ({
     color,
-    image: index === 0 ? product.mainImage : (product.galleryImages || [])[index - 1]
+    image: images[index] || images[0] || product.mainImage || ''
   })).filter(item => item.image);
+}
+
+function syncActiveModalColor() {
+  const variantsContainer = document.getElementById('pm-variants-container');
+  if (!variantsContainer || !modalColorPairs.length) return;
+  const activeImage = modalImages[currentImageIndex];
+  const activePairIndex = modalColorPairs.findIndex(pair => pair.image === activeImage);
+  variantsContainer.querySelectorAll('.pm-color-btn').forEach((button, index) => {
+    button.classList.toggle('active', index === activePairIndex);
+  });
+}
+
+function setupModalImageZoom() {
+  const gallery = document.getElementById('pm-gallery');
+  if (!gallery) return;
+  let lens = gallery.querySelector('.pm-zoom-lens');
+  if (!lens) {
+    lens = document.createElement('div');
+    lens.className = 'pm-zoom-lens';
+    gallery.appendChild(lens);
+  }
+  const clearZoom = () => {
+    gallery.classList.remove('zooming');
+    gallery.style.removeProperty('--zoom-x');
+    gallery.style.removeProperty('--zoom-y');
+    if (lens) {
+      lens.style.removeProperty('left');
+      lens.style.removeProperty('top');
+    }
+  };
+  gallery.onmousemove = (e) => {
+    const img = gallery.querySelector('.pm-carousel-img.is-active');
+    if (!img) return clearZoom();
+    const rect = img.getBoundingClientRect();
+    const galleryRect = gallery.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return clearZoom();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    if (x < 0 || x > 100 || y < 0 || y > 100) return clearZoom();
+    gallery.classList.add('zooming');
+    gallery.style.setProperty('--zoom-x', `${x}%`);
+    gallery.style.setProperty('--zoom-y', `${y}%`);
+    lens.style.left = `${e.clientX - galleryRect.left}px`;
+    lens.style.top = `${e.clientY - galleryRect.top}px`;
+    img.style.transformOrigin = `${x}% ${y}%`;
+  };
+  gallery.onmouseleave = clearZoom;
 }
 
 function openProductModal(product) {
@@ -708,8 +757,8 @@ function openProductModal(product) {
   const variantsContainer = document.getElementById('pm-variants-container');
   if (variantsContainer) {
     const variants = Array.isArray(product.variants) ? product.variants : [];
-    const colorPairs = buildColorImagePairs(product);
-    variantsContainer.hidden = variants.length < 2 && colorPairs.length < 2;
+    modalColorPairs = buildColorImagePairs(product);
+    variantsContainer.hidden = variants.length < 2 && modalColorPairs.length < 2;
     const cortesHTML = variants.length > 1
       ? `<span class="pm-variants-label">Elige el corte:</span><div class="pm-variants-list pm-cut-list">${variants.map(variant => {
           const label = variant.name.split(/\s-\s/).pop();
@@ -717,8 +766,8 @@ function openProductModal(product) {
           return `<button type="button" class="pm-variant-btn${active}" data-variant-id="${esc(variant.id || '')}">${esc(label)}</button>`;
         }).join('')}</div>`
       : '';
-    const coloresHTML = colorPairs.length > 1
-      ? `<span class="pm-variants-label">Elige el color:</span><div class="pm-variants-list pm-color-list">${colorPairs.map((item, index) => `
+    const coloresHTML = modalColorPairs.length > 1
+      ? `<span class="pm-variants-label">Elige el color:</span><div class="pm-variants-list pm-color-list">${modalColorPairs.map((item, index) => `
           <button type="button" class="pm-color-btn${index === 0 ? ' active' : ''}" data-color-index="${index}" title="${esc(colorLabel(item.color, index))}">
             <span style="background:${esc(colorToCss(item.color))}"></span>${esc(colorLabel(item.color, index))}
           </button>
@@ -733,12 +782,10 @@ function openProductModal(product) {
     });
     variantsContainer.querySelectorAll('[data-color-index]').forEach(button => {
       button.addEventListener('click', () => {
-        const pair = colorPairs[Number(button.dataset.colorIndex)];
+        const pair = modalColorPairs[Number(button.dataset.colorIndex)];
         const targetIndex = modalImages.indexOf(pair && pair.image);
         if (targetIndex < 0) return;
         currentImageIndex = targetIndex;
-        variantsContainer.querySelectorAll('.pm-color-btn').forEach(b => b.classList.remove('active'));
-        button.classList.add('active');
         updateCarouselPos();
       });
     });
@@ -992,6 +1039,10 @@ function openProductModal(product) {
   }
 
   modalImages = buildProductImages(product);
+  if (modalColorPairs.length > 1) {
+    const orderedByColor = modalColorPairs.map(pair => pair.image).filter(Boolean);
+    modalImages = [...new Set([...orderedByColor, ...modalImages])];
+  }
 
   if (modalImages.length === 0) {
     modalImages = ['assets/logo-bicho-capricho.webp'];
@@ -1032,16 +1083,22 @@ function renderModalCarousel() {
     document.getElementById('pm-next').style.display = 'none';
   }
   
+  setupModalImageZoom();
   updateCarouselPos();
 }
 
 function updateCarouselPos() {
   const carousel = document.getElementById('pm-carousel');
   carousel.style.transform = `translateX(-${currentImageIndex * 100}%)`;
+  carousel.querySelectorAll('.pm-carousel-img').forEach((img, i) => {
+    img.classList.toggle('is-active', i === currentImageIndex);
+    if (i !== currentImageIndex) img.style.removeProperty('transform-origin');
+  });
   
   document.querySelectorAll('.pm-dot').forEach((dot, i) => {
     dot.classList.toggle('active', i === currentImageIndex);
   });
+  syncActiveModalColor();
 }
 
 document.getElementById('pm-prev').addEventListener('click', () => {
