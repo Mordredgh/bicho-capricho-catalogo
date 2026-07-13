@@ -567,6 +567,8 @@ footer{background:var(--forest);color:var(--cream);padding:80px 0 25px}.footer-m
   overflow-y: auto;
 }
 .p-modal-overlay.open { opacity: 1; pointer-events: all; }
+.p-modal-overlay.closing { pointer-events: none !important; }
+body:not(.product-modal-open) .p-modal-overlay { pointer-events: none !important; }
 .p-modal {
   background: var(--cream);
   border: 2px solid var(--forest);
@@ -2877,6 +2879,8 @@ footer{background:var(--forest);color:var(--cream);padding:80px 0 25px}.footer-m
   height: 62px;
   background: url("assets/logo-bicho-capricho.webp") left center / contain no-repeat;
   opacity: .72;
+  z-index: 5;
+  pointer-events: none;
 }
 .pm-carousel-img {
   position: relative;
@@ -2884,12 +2888,13 @@ footer{background:var(--forest);color:var(--cream);padding:80px 0 25px}.footer-m
   padding: clamp(12px, 2.5vw, 32px) !important;
   mix-blend-mode: normal !important;
   filter: drop-shadow(0 28px 34px rgba(28, 79, 50, .18));
-  cursor: zoom-in;
+  cursor: default;
   transition: opacity .18s ease, filter .18s ease, transform .18s ease;
 }
 .pm-carousel-img.is-active {
   pointer-events: auto;
 }
+body.product-modal-open .pm-carousel-img.is-active { cursor: zoom-in; }
 .pm-carousel.zooming .pm-carousel-img.is-active {
   transform: scale(1.08);
   filter: drop-shadow(0 30px 38px rgba(28, 79, 50, .2));

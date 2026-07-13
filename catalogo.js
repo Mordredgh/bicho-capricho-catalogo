@@ -293,7 +293,7 @@ function groupCollectionProducts(products) {
   });
   return [...groups.values()].map(group => {
     const preferred = group.variants.find(v => /\s-\sHombre$/i.test(v.name)) || group.variants[0];
-    const displayName = preferred.grupoDiseno || group.baseName || group.variants[0].name.replace(/\s-\s(?:Hombre|Mujer|Juvenil|Ni.os)$/i, '').trim();
+    const displayName = preferred.grupoDiseno || group.baseName || group.variants[0].name.replace(/\s-\s(?:Hombre|Mujer|Juvenil|Niños)$/i, '').trim();
     return { ...preferred, variants: group.variants, displayName, displayDesc: `Diseño ${displayName}. Elige tu corte.` };
   });
 }
@@ -727,6 +727,7 @@ let modalImages = [];
 let modalColorPairs = [];
 let currentImageIndex = 0;
 let currentModalProduct = null;
+let productModalCloseTimer = null;
 
 function buildProductImages(product) {
   const images = [];
@@ -742,27 +743,13 @@ const IMAGE_PRESETS = {
 };
 
 function optimizedImageUrl(src, preset = 'card') {
-  if (!src || typeof src !== 'string') return src;
-  const cfg = IMAGE_PRESETS[preset] || IMAGE_PRESETS.card;
-  return optimizedImageUrlByWidth(src, cfg.width, cfg.quality);
+  // Fluidez primero: Supabase render/image reduce bytes, pero su primera
+  // transformación puede sentirse más lenta. Mantenemos URL directa/cacheada.
+  return src;
 }
 
 function optimizedImageUrlByWidth(src, width, quality = 76) {
-  if (!src || typeof src !== 'string') return src;
-  try {
-    const url = new URL(src, window.location.origin);
-    const objectSegment = '/storage/v1/object/public/';
-    const renderSegment = '/storage/v1/render/image/public/';
-    if (!url.pathname.includes(objectSegment) && !url.pathname.includes(renderSegment)) return src;
-    if (/\.(svg|gif)$/i.test(url.pathname)) return src;
-    url.pathname = url.pathname.replace(objectSegment, renderSegment);
-    url.searchParams.set('width', String(width));
-    url.searchParams.set('quality', String(quality));
-    url.searchParams.set('resize', 'contain');
-    return url.toString();
-  } catch {
-    return src;
-  }
+  return src;
 }
 
 function buildOptimizedProductImages(product, preset = 'modal') {
@@ -770,9 +757,23 @@ function buildOptimizedProductImages(product, preset = 'modal') {
 }
 
 function imageSrcsetAttr(src, widths = [360, 720, 1100], quality = 76) {
-  if (!src || typeof src !== 'string' || !src.includes('/storage/v1/')) return '';
-  const srcset = widths.map(width => `${optimizedImageUrlByWidth(src, width, quality)} ${width}w`).join(', ');
-  return ` srcset="${esc(srcset)}"`;
+  return '';
+}
+
+function preloadModalImages() {
+  const queue = modalImages.filter((src, index) => src && index !== currentImageIndex);
+  const run = () => {
+    queue.forEach(src => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = src;
+    });
+  };
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(run, { timeout: 1200 });
+  } else {
+    setTimeout(run, 250);
+  }
 }
 
 function colorToCss(color) {
@@ -869,16 +870,22 @@ function renderSelectedModalMeta() {
   meta.innerHTML = items.map(item => `<span>${esc(item)}</span>`).join('');
 }
 
+function resetModalImageZoom() {
+  const carousel = document.getElementById('pm-carousel');
+  if (!carousel) return;
+  carousel.classList.remove('zooming');
+  carousel.querySelectorAll('.pm-carousel-img').forEach(img => {
+    img.style.removeProperty('transform-origin');
+  });
+}
+
 function setupModalImageZoom() {
   const carousel = document.getElementById('pm-carousel');
   if (!carousel) return;
-  const clearZoom = () => {
-    carousel.classList.remove('zooming');
-    carousel.querySelectorAll('.pm-carousel-img').forEach(img => {
-      img.style.removeProperty('transform-origin');
-    });
-  };
+  const clearZoom = resetModalImageZoom;
   carousel.onmousemove = (e) => {
+    const overlay = document.getElementById('p-modal-overlay');
+    if (!overlay || !overlay.classList.contains('open')) return clearZoom();
     const img = carousel.querySelector('.pm-carousel-img.is-active');
     if (!img) return clearZoom();
     const rect = img.getBoundingClientRect();
@@ -894,10 +901,17 @@ function setupModalImageZoom() {
 
 function openProductModal(product) {
   const modal = document.getElementById('p-modal-overlay');
+  if (productModalCloseTimer) {
+    clearTimeout(productModalCloseTimer);
+    productModalCloseTimer = null;
+  }
+  resetModalImageZoom();
+  modal.classList.remove('closing');
+  document.body.classList.add('product-modal-open');
   currentModalProduct = product;
   saveRecentViewed(product);
   
-  const modalDisplayName = product.displayName || product.name.replace(/\s-\s(?:Hombre|Mujer|Juvenil|Ni.os)$/i, '').trim();
+  const modalDisplayName = product.displayName || product.name.replace(/\s-\s(?:Hombre|Mujer|Juvenil|Niños)$/i, '').trim();
   document.getElementById('pm-title').textContent = modalDisplayName;
   const variantsContainer = document.getElementById('pm-variants-container');
   if (variantsContainer) {
@@ -1275,6 +1289,7 @@ function renderModalCarousel() {
   
   setupModalImageZoom();
   updateCarouselPos();
+  preloadModalImages();
 }
 
 function updateCarouselPos() {
@@ -1309,10 +1324,14 @@ document.getElementById('pm-next').addEventListener('click', () => {
 
 function closeProductModal() {
   const overlay = document.getElementById('p-modal-overlay');
-  // Animación elástica de cierre (Fase 14)
+  if (!overlay || !overlay.classList.contains('open') || overlay.classList.contains('closing')) return;
+  resetModalImageZoom();
   overlay.classList.add('closing');
-  setTimeout(() => {
+  productModalCloseTimer = setTimeout(() => {
     overlay.classList.remove('open', 'closing');
+    document.body.classList.remove('product-modal-open');
+    productModalCloseTimer = null;
+    resetModalImageZoom();
     if (modalTriggerEl && typeof modalTriggerEl.focus === 'function') modalTriggerEl.focus();
   }, 380);
 }
@@ -1583,7 +1602,7 @@ function updateWishlistUI() {
       quoteBtn.style.pointerEvents = 'all';
       
       const itemsListMsg = wishlist.map(item => `• ${item.quantity}x ${item.name} (${item.price})`).join('\n');
-      const fullMsg = `Hola! Me encantaría cotizar estos caprichos de mi lista: \n\n${itemsListMsg}\n\n¿Me compartes detalles de disponibilidad y entregas? 💖`;
+      const fullMsg = `Hola! Me encantaría cotizar estos caprichos de mi lista:\n\n${itemsListMsg}\n\n¿Me compartes detalles de disponibilidad y entregas?`;
       quoteBtn.href = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(fullMsg)}`;
     }
   }
