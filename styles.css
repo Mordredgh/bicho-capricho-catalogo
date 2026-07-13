@@ -3182,6 +3182,27 @@ body.product-modal-open .pm-carousel-img.is-active { cursor: zoom-in; }
   transform: translateY(-2px) !important;
 }
 
+/* Restaurar hover rápido de notas FAQ. Debe ir al final para ganar a resets globales. */
+.faq-note {
+  transition: transform .14s ease-out, box-shadow .14s ease-out !important;
+  will-change: transform;
+}
+.faq-note:hover {
+  box-shadow: 10px 12px 0 rgba(28, 79, 50, .16) !important;
+}
+.faq-note.note-pink:hover {
+  transform: translate3d(0, -8px, 0) rotate(-4deg) scale(1.02) !important;
+}
+.faq-note.note-lavender:hover {
+  transform: translate3d(0, -8px, 0) rotate(4deg) scale(1.02) !important;
+}
+.faq-note.note-butter:hover {
+  transform: translate3d(0, -8px, 0) rotate(-3deg) scale(1.02) !important;
+}
+.faq-note.note-lime:hover {
+  transform: translate3d(0, -8px, 0) rotate(5deg) scale(1.02) !important;
+}
+
 @media (max-width: 900px) {
   .p-modal {
     width: min(620px, calc(100vw - 24px)) !important;
