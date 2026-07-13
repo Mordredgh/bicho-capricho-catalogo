@@ -233,7 +233,7 @@ function createCardHTML(p, index) {
   const washiTapeHTML = `<div class="card-washi ${tapeColor}"></div>`;
   
   const photoContent = p.mainImage 
-    ? `<img src="${p.mainImage}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" decoding="async" alt="${p.name}">`
+    ? `<img src="${optimizedImageUrl(p.mainImage, 'card')}"${imageSrcsetAttr(p.mainImage, [360, 720, 1000], 76)} sizes="(max-width: 700px) 90vw, (max-width: 1100px) 33vw, 25vw" style="width:100%;height:100%;object-fit:cover;" loading="lazy" decoding="async" alt="${p.name}">`
     : `<div class="visual ${p.mockClass || 'tote'}"><span>Bicho</span></div><i class="confetti c1">✦</i>`;
 
   // Validar que el badge tenga un archivo correspondiente
@@ -252,7 +252,8 @@ function createCardHTML(p, index) {
         const styleAttr = isHex ? `style="background-color: ${c};"` : '';
         const classAttr = isHex ? '' : c;
         // La primera foto es la principal, las siguientes corresponden a la galería
-        const targetImg = i === 0 ? p.mainImage : (p.galleryImages && p.galleryImages[i - 1]) || p.mainImage;
+        const targetImgRaw = i === 0 ? p.mainImage : (p.galleryImages && p.galleryImages[i - 1]) || p.mainImage;
+        const targetImg = optimizedImageUrl(targetImgRaw, 'card');
         const clickAttr = targetImg ? `onclick="changeCardImage(event, this, '${targetImg.replace(/'/g, "\\'")}')"` : 'onclick="event.stopPropagation();"';
         return `<span class="swatch-dot ${classAttr} ${i === 0 ? 'active' : ''}" ${styleAttr} ${clickAttr} title="Disponible en ${c}"></span>`;
       }).join('')}
@@ -304,6 +305,41 @@ function renderCatalog() {
   renderCatalogSlider('colecciones', collectionProducts);
   const collectionsSection = document.getElementById('colecciones-subsection');
   if (collectionsSection) collectionsSection.style.display = (_coleccionesData.length || collectionProducts.length) ? '' : 'none';
+}
+
+const sliderState = {
+  catalog: { page: 0, chunks: [] },
+  colecciones: { page: 0, chunks: [] }
+};
+
+function bindRenderedCards(slider) {
+  slider.querySelectorAll('.catalog-card').forEach(card => {
+    card.addEventListener('click', (e) => {
+      spawnDoodleConfetti(e.pageX, e.pageY);
+      const product = window._catalogDisplayProducts.get(card.dataset.productId) || allProducts.find(p => p.id && p.id === card.dataset.productId);
+      if (product) openProductModal(product);
+    });
+  });
+  initCardParallax(slider);
+}
+
+function renderCatalogPage(prefix, pageIndex = 0) {
+  const isCollections = prefix === 'colecciones';
+  const slider = document.getElementById(isCollections ? 'colecciones-slider' : 'catalog-slider');
+  const dotsContainer = document.getElementById(isCollections ? 'colecciones-slider-dots' : 'slider-dots');
+  const state = sliderState[prefix];
+  if (!slider || !dotsContainer || !state?.chunks?.length) return;
+  const maxPage = state.chunks.length - 1;
+  state.page = Math.max(0, Math.min(pageIndex, maxPage));
+  const chunk = state.chunks[state.page] || [];
+  const pageOffset = state.page * 8;
+  slider.innerHTML = `<div class="catalog-page animate-items" id="${prefix}-page-${state.page}"><div class="product-grid">${
+    chunk.map((p, chunkIdx) => createCardHTML(p, pageOffset + chunkIdx)).join('')
+  }</div></div>`;
+  dotsContainer.querySelectorAll('.slider-dot').forEach((dot, index) => {
+    dot.classList.toggle('active', index === state.page);
+  });
+  bindRenderedCards(slider);
 }
 
 function renderCatalogSlider(prefix, products) {
@@ -361,37 +397,20 @@ function renderCatalogSlider(prefix, products) {
     chunks.push(sortedForDisplay.slice(i, i + 8));
   }
 
-  let html = '';
   let dots = '';
   chunks.forEach((chunk, pageIndex) => {
-    html += `<div class="catalog-page" id="${prefix}-page-${pageIndex}"><div class="product-grid">`;
-    // Bug #16 fix: use the filtered index offset instead of indexOf (which can return wrong result
-    // when filteredProducts is a subset of allProducts with object references that may not match)
-    const pageOffset = pageIndex * 8;
-    chunk.forEach((p, chunkIdx) => {
-      html += createCardHTML(p, pageOffset + chunkIdx);
-    });
-    html += `</div></div>`;
-    dots += `<div class="slider-dot ${pageIndex === 0 ? 'active' : ''}" data-target="${prefix}-page-${pageIndex}"></div>`;
+    dots += `<button type="button" class="slider-dot ${pageIndex === 0 ? 'active' : ''}" data-page-index="${pageIndex}" aria-label="Ir a página ${pageIndex + 1}"></button>`;
   });
 
-  slider.innerHTML = html;
+  sliderState[prefix].chunks = chunks;
+  sliderState[prefix].page = 0;
+  slider.innerHTML = '';
   dotsContainer.innerHTML = chunks.length > 1 ? dots : '';
+  renderCatalogPage(prefix, 0);
 
-  document.querySelectorAll('.slider-dot').forEach((dot, index) => {
+  dotsContainer.querySelectorAll('.slider-dot').forEach((dot) => {
     dot.addEventListener('click', () => {
-      const page = document.getElementById(dot.dataset.target);
-      slider.scrollTo({ left: page.offsetLeft, behavior: 'smooth' });
-    });
-  });
-
-  slider.addEventListener('scroll', () => {
-    const scrollLeft = slider.scrollLeft;
-    const clientWidth = slider.clientWidth;
-    
-    let activeIndex = Math.round(scrollLeft / clientWidth);
-    document.querySelectorAll('.slider-dot').forEach((dot, index) => {
-      dot.classList.toggle('active', index === activeIndex);
+      renderCatalogPage(prefix, Number(dot.dataset.pageIndex) || 0);
     });
   });
 
@@ -401,19 +420,9 @@ function renderCatalogSlider(prefix, products) {
     btnPrev.style.display = chunks.length > 1 ? 'grid' : 'none';
     btnNext.style.display = chunks.length > 1 ? 'grid' : 'none';
     
-    btnPrev.onclick = () => slider.scrollBy({ left: -slider.clientWidth, behavior: 'smooth' });
-    btnNext.onclick = () => slider.scrollBy({ left: slider.clientWidth, behavior: 'smooth' });
+    btnPrev.onclick = () => renderCatalogPage(prefix, sliderState[prefix].page - 1);
+    btnNext.onclick = () => renderCatalogPage(prefix, sliderState[prefix].page + 1);
   }
-
-  document.querySelectorAll('.catalog-card').forEach(card => {
-    card.addEventListener('click', (e) => {
-      spawnDoodleConfetti(e.pageX, e.pageY);
-      const product = window._catalogDisplayProducts.get(card.dataset.productId) || allProducts.find(p => p.id && p.id === card.dataset.productId);
-      if (product) openProductModal(product);
-    });
-  });
-
-  initCardParallax();
 }
 
 // ── FILTERS AND SEARCH ──
@@ -611,7 +620,7 @@ function renderRecienAgregado(products) {
   section.style.display = 'block';
   list.innerHTML = recientes.map(p => `
     <div class="crosssell-card" style="flex:0 0 140px; cursor:pointer;" onclick='openProductModal(allProducts.find(x=>x.id==="${p.id}"))'>
-      <img src="${p.mainImage || 'assets/favicon-180.png'}" alt="${esc(p.name)}" loading="lazy" style="width:100%;height:100px;object-fit:cover;border-radius:10px;">
+      <img src="${optimizedImageUrl(p.mainImage || 'assets/favicon-180.png', 'thumb')}" alt="${esc(p.name)}" loading="lazy" decoding="async" style="width:100%;height:100px;object-fit:cover;border-radius:10px;">
       <p style="font-size:12px;font-weight:800;margin:6px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.name)}</p>
       <p style="font-size:12px;color:var(--grape);font-weight:700;">${esc(p.price)}</p>
     </div>
@@ -649,7 +658,7 @@ function renderVistosRecientes() {
   section.style.display = 'block';
   list.innerHTML = vistos.map(p => `
     <button type="button" class="crosssell-card recent-view-card" style="flex:0 0 140px; cursor:pointer; border:0; text-align:left;" onclick='openProductModal((window._catalogDisplayProducts && window._catalogDisplayProducts.get("${p.id}")) || allProducts.find(x=>x.id==="${p.id}"))'>
-      <img src="${p.mainImage || 'assets/favicon-180.png'}" alt="${esc(p.name)}" loading="lazy" style="width:100%;height:100px;object-fit:cover;border-radius:10px;">
+      <img src="${optimizedImageUrl(p.mainImage || 'assets/favicon-180.png', 'thumb')}" alt="${esc(p.name)}" loading="lazy" decoding="async" style="width:100%;height:100px;object-fit:cover;border-radius:10px;">
       <p style="font-size:12px;font-weight:800;margin:6px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.displayName || p.name)}</p>
       <p style="font-size:12px;color:var(--grape);font-weight:700;">${esc(p.price)}</p>
     </button>
@@ -726,6 +735,46 @@ function buildProductImages(product) {
   return [...new Set(images.filter(src => typeof src === 'string' && src.trim()))];
 }
 
+const IMAGE_PRESETS = {
+  thumb: { width: 180, quality: 68 },
+  card:  { width: 720, quality: 76 },
+  modal: { width: 1400, quality: 82 }
+};
+
+function optimizedImageUrl(src, preset = 'card') {
+  if (!src || typeof src !== 'string') return src;
+  const cfg = IMAGE_PRESETS[preset] || IMAGE_PRESETS.card;
+  return optimizedImageUrlByWidth(src, cfg.width, cfg.quality);
+}
+
+function optimizedImageUrlByWidth(src, width, quality = 76) {
+  if (!src || typeof src !== 'string') return src;
+  try {
+    const url = new URL(src, window.location.origin);
+    const objectSegment = '/storage/v1/object/public/';
+    const renderSegment = '/storage/v1/render/image/public/';
+    if (!url.pathname.includes(objectSegment) && !url.pathname.includes(renderSegment)) return src;
+    if (/\.(svg|gif)$/i.test(url.pathname)) return src;
+    url.pathname = url.pathname.replace(objectSegment, renderSegment);
+    url.searchParams.set('width', String(width));
+    url.searchParams.set('quality', String(quality));
+    url.searchParams.set('resize', 'contain');
+    return url.toString();
+  } catch {
+    return src;
+  }
+}
+
+function buildOptimizedProductImages(product, preset = 'modal') {
+  return buildProductImages(product).map(src => optimizedImageUrl(src, preset));
+}
+
+function imageSrcsetAttr(src, widths = [360, 720, 1100], quality = 76) {
+  if (!src || typeof src !== 'string' || !src.includes('/storage/v1/')) return '';
+  const srcset = widths.map(width => `${optimizedImageUrlByWidth(src, width, quality)} ${width}w`).join(', ');
+  return ` srcset="${esc(srcset)}"`;
+}
+
 function colorToCss(color) {
   const key = String(color || '').trim().toLowerCase();
   const map = {
@@ -763,10 +812,10 @@ function colorLabel(color, index) {
 function buildColorImagePairs(product) {
   const colors = Array.isArray(product.colors) ? product.colors : [];
   if (!colors.length) return [];
-  const images = buildProductImages(product);
+  const images = buildOptimizedProductImages(product, 'modal');
   return colors.map((color, index) => ({
     color,
-    image: images[index] || images[0] || product.mainImage || ''
+    image: images[index] || images[0] || optimizedImageUrl(product.mainImage, 'modal') || ''
   })).filter(item => item.image);
 }
 
@@ -1155,7 +1204,7 @@ function openProductModal(product) {
     };
   }
 
-  modalImages = buildProductImages(product);
+  modalImages = buildOptimizedProductImages(product, 'modal');
   if (modalColorPairs.length > 1) {
     const orderedByColor = modalColorPairs.map(pair => pair.image).filter(Boolean);
     modalImages = [...new Set([...orderedByColor, ...modalImages])];
@@ -1184,7 +1233,7 @@ function renderModalCarousel() {
 
   carousel.innerHTML = modalImages.map((src, i) => {
     const priority = i === currentImageIndex ? 'loading="eager" fetchpriority="high"' : 'loading="lazy"';
-    return `<img src="${src}" class="pm-carousel-img loaded" alt="${esc(currentModalProductName)}${modalImages.length > 1 ? ` — foto ${i + 1} de ${modalImages.length}` : ''}" decoding="async" ${priority}>`;
+    return `<img src="${src}"${imageSrcsetAttr(src, [720, 1100, 1400], 82)} sizes="(max-width: 900px) 92vw, 48vw" class="pm-carousel-img loaded" alt="${esc(currentModalProductName)}${modalImages.length > 1 ? ` — foto ${i + 1} de ${modalImages.length}` : ''}" decoding="async" ${priority}>`;
   }).join('');
   carousel.querySelectorAll('img').forEach(img => {
     if (img.complete && img.naturalWidth > 0) img.classList.add('loaded');
@@ -1200,9 +1249,10 @@ function renderModalCarousel() {
       thumbsContainer.innerHTML = modalImages.map((src, i) => {
         const colorIndex = modalColorPairs.findIndex(pair => pair.image === src);
         const label = colorIndex >= 0 ? colorLabel(modalColorPairs[colorIndex].color, colorIndex) : `Foto ${i + 1}`;
+        const thumbSrc = optimizedImageUrl(src, 'thumb');
         return `
         <button type="button" class="pm-thumb ${i === 0 ? 'active' : ''}" data-img-index="${i}" aria-label="Ver ${esc(label)}">
-          <img src="${src}" alt="" loading="lazy" decoding="async">
+          <img src="${thumbSrc}" alt="" loading="lazy" decoding="async">
           <span>${esc(label)}</span>
         </button>
       `;
@@ -1353,11 +1403,11 @@ if (floatingWaBtn) {
 }
 
 // ── EFECTO HOVER 3D (PARALLAX) EN TARJETAS ──
-function initCardParallax() {
+function initCardParallax(scope = document) {
   // Respetar preferencia de reducir movimiento
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-  const cards = document.querySelectorAll('.catalog-card');
+  const cards = scope.querySelectorAll('.catalog-card');
   cards.forEach(card => {
     const isTiltLeft = card.classList.contains('tilt-left');
     const isTiltRight = card.classList.contains('tilt-right');
@@ -1373,11 +1423,11 @@ function initCardParallax() {
       const xc = (x / width) - 0.5;
       const yc = (y / height) - 0.5;
       
-      const rotateY = xc * 20; 
-      const rotateX = -yc * 20;
+      const rotateY = xc * 8;
+      const rotateX = -yc * 8;
       
-      card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-8px) scale(1.02)`;
-      card.style.boxShadow = `0px 20px 30px rgba(28, 79, 50, 0.16)`;
+      card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-5px) scale(1.01)`;
+      card.style.boxShadow = `0px 14px 24px rgba(28, 79, 50, 0.13)`;
       card.style.transition = 'none';
     });
     
@@ -1766,7 +1816,7 @@ function renderSuggestions(query) {
 
   suggestionsEl.innerHTML = matches.map((p, i) => {
     const thumb = p.mainImage
-      ? `<img class="suggestion-thumb" src="${p.mainImage}" alt="" loading="lazy">`
+      ? `<img class="suggestion-thumb" src="${optimizedImageUrl(p.mainImage, 'thumb')}" alt="" loading="lazy" decoding="async">`
       : `<div class="suggestion-thumb-placeholder">✦</div>`;
     return `
       <div class="suggestion-item" role="option" aria-selected="false" data-idx="${i}"
@@ -1937,7 +1987,7 @@ function openComparePanel() {
 
   grid.innerHTML = compareList.map(p => {
     const imgHTML = p.mainImage
-      ? `<img class="compare-col-img" src="${p.mainImage}" alt="${esc(p.name)}" loading="lazy">`
+      ? `<img class="compare-col-img" src="${optimizedImageUrl(p.mainImage, 'card')}" alt="${esc(p.name)}" loading="lazy" decoding="async">`
       : `<div class="compare-col-visual">✦</div>`;
 
     const swatches = (p.colors && p.colors.length)

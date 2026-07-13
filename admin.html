@@ -2261,16 +2261,18 @@
         try {
           const mockupImg = await loadImageFromUrl(mockup.foto_url);
           const canvas = document.createElement('canvas');
-          canvas.width = mockupImg.naturalWidth;
-          canvas.height = mockupImg.naturalHeight;
+          const maxCanvasWidth = 1400;
+          const canvasRatio = Math.min(1, maxCanvasWidth / mockupImg.naturalWidth);
+          canvas.width = Math.round(mockupImg.naturalWidth * canvasRatio);
+          canvas.height = Math.round(mockupImg.naturalHeight * canvasRatio);
           const ctx = canvas.getContext('2d');
-          ctx.drawImage(mockupImg, 0, 0);
+          ctx.drawImage(mockupImg, 0, 0, canvas.width, canvas.height);
           const dW = canvas.width * d.scale;
           const dH = dW * (d.img.naturalHeight / d.img.naturalWidth);
           const dX = canvas.width * (d.offsetX ?? 0.5) - dW / 2;
           const dY = canvas.height * d.offsetY;
           ctx.drawImage(d.img, dX, dY, dW, dH);
-          const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', 0.9));
+          const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', 0.82));
           const safeName = mockup.nombre.replace(/[^a-z0-9]/gi, '-').toLowerCase();
           const path = `productos/${Date.now()}-${safeName}.webp`;
           const url = await supaUploadAuth(path, blob);

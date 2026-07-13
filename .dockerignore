@@ -1,6 +1,31 @@
 node_modules
-dist
 .ralph
 .agents
 *.md
 package-lock.json
+
+# Assets pesados no referenciados por index/admin/catalogo/styles.
+# Se conservan en repo/local, pero no entran al contenedor de producción.
+assets/doodles/Nube_tipo_badge.png
+assets/doodles/Burbuja_de_pensamiento_tipo_badge.png
+assets/doodles/Flor_tipo_badge.png
+assets/doodles/Escudo_tipo_garant_a.png
+assets/marcos/Marco_con_borde_de_vichy.svg
+assets/doodles/C_rculo_garabateado_para_rodear_una_palabra_.png
+assets/doodles/Comillas_grandes_decorativas.png
+assets/doodles/_valo_garabateado_horizontal.png
+assets/doodles/Recuadro_garabateado.png
+assets/doodles/Subrayado_tipo_llave_bracket_underline_.png
+assets/doodles/Flecha_recta_apuntando_arriba.png
+assets/doodles/Hex_gono_para_insignia.png
+assets/doodles/Asterisco_garabateado.png
+assets/doodles/Espiral_peque_a_de_nfasis.png
+assets/doodles/Doble_flecha_curva_ida_y_vuelta_.png
+assets/doodles/Fila_de_5_estrellas_de_calificaci_n.png
+assets/doodles/Flecha_curva_se_alando_abajo_.png
+assets/doodles/Trazo_de_marcador_resaltador.png
+assets/doodles/L_nea_de_puntos_de_nfasis.png
+assets/doodles/Subrayado_doble.png
+assets/doodles/Marco_de_esquinas_sueltas_para_resaltar_una_foto_.png
+assets/doodles/Flecha_curva_se_alando_derecha_.png
+assets/badges/Burbuja_circular_tipo_top_ventas.png
