@@ -607,6 +607,7 @@ body:not(.product-modal-open) .p-modal-overlay { pointer-events: none !important
 .pm-carousel {
   display: grid;
   position: relative;
+  z-index: 1;
   width: 100%; height: 100%;
 }
 .pm-carousel-img {
@@ -2873,13 +2874,14 @@ body:not(.product-modal-open) .p-modal-overlay { pointer-events: none !important
 .p-modal-gallery::after {
   content: "";
   position: absolute;
-  left: 30px;
-  top: 26px;
-  width: 220px;
-  height: 62px;
+  left: 28px;
+  top: 24px;
+  width: 260px;
+  height: 74px;
   background: url("assets/logo-bicho-capricho.webp") left center / contain no-repeat;
-  opacity: .72;
-  z-index: 5;
+  opacity: 1;
+  z-index: 30;
+  filter: drop-shadow(0 2px 8px rgba(255, 253, 248, .75));
   pointer-events: none;
 }
 .pm-carousel-img {
