@@ -89,8 +89,8 @@ async function loadProducts() {
     try {
       const [categories, rows, colecciones] = await Promise.all([
         supaGet('categories', 'select=id,name,emoji,color&order=name'),
-        supaGet('catalogo_productos', 'select=*&activo=eq.true&order=created_at.desc'),
-        supaGet('catalogo_colecciones', 'select=id,nombre,emoji,descripcion,banner_url&order=nombre').catch(() => [])
+        supaGet('catalogo_productos', 'select=*&activo=eq.true&visible_catalogo=eq.true&order=orden.asc,created_at.desc'),
+        supaGet('catalogo_colecciones', 'select=id,nombre,emoji,descripcion,banner_url,orden,destacada,visible_catalogo,derechos_sensibles&activa=eq.true&visible_catalogo=eq.true&order=orden.asc,nombre.asc').catch(() => [])
       ]);
 
       categories.forEach(cat => {
@@ -117,6 +117,10 @@ async function loadProducts() {
         mockClass:    p.mock_class || 'tote',
         coleccion:    p.coleccion || '',
         grupoDiseno:  p.grupo_diseno || '',
+        tipoItem:     p.tipo_item || (p.coleccion ? 'diseno_coleccion' : 'producto_general'),
+        order:        Number(p.orden) || 0,
+        visibleCatalogo: p.visible_catalogo !== false,
+        derechosSensibles: !!p.derechos_sensibles,
         precioEstampadoDesde: parseFloat(p.precio_estampado_desde) || 0,
         createdAt:    p.created_at || ''
       }));
@@ -229,7 +233,7 @@ function createCardHTML(p, index) {
   const washiTapeHTML = `<div class="card-washi ${tapeColor}"></div>`;
   
   const photoContent = p.mainImage 
-    ? `<img src="${p.mainImage}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" alt="${p.name}">` 
+    ? `<img src="${p.mainImage}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" decoding="async" alt="${p.name}">`
     : `<div class="visual ${p.mockClass || 'tote'}"><span>Bicho</span></div><i class="confetti c1">✦</i>`;
 
   // Validar que el badge tenga un archivo correspondiente
@@ -294,8 +298,8 @@ function groupCollectionProducts(products) {
 }
 
 function renderCatalog() {
-  const normalProducts = filteredProducts.filter(p => !p.coleccion);
-  const collectionProducts = groupCollectionProducts(filteredProducts.filter(p => p.coleccion));
+  const normalProducts = filteredProducts.filter(p => (p.tipoItem || (p.coleccion ? 'diseno_coleccion' : 'producto_general')) === 'producto_general');
+  const collectionProducts = groupCollectionProducts(filteredProducts.filter(p => (p.tipoItem || (p.coleccion ? 'diseno_coleccion' : 'producto_general')) === 'diseno_coleccion'));
   renderCatalogSlider('catalog', normalProducts);
   renderCatalogSlider('colecciones', collectionProducts);
   const collectionsSection = document.getElementById('colecciones-subsection');
@@ -553,9 +557,13 @@ function renderColeccionBanner(id) {
   coleccionBannerEl.style.display = '';
   const collectionUrl = `${window.location.origin}${window.location.pathname}?coleccion=${encodeURIComponent(c.id)}`;
   coleccionBannerEl.innerHTML = `
-    ${c.banner_url ? `<img class="coleccion-hero-banner-img" src="${c.banner_url}" alt="${esc(c.nombre)}" loading="lazy">` : ''}
+    ${c.banner_url ? `<img class="coleccion-hero-banner-img" src="${c.banner_url}" alt="${esc(c.nombre)}" loading="lazy" decoding="async">` : ''}
     <div style="text-align:center;margin-bottom:18px;">
       <strong style="font-family:'Fredoka',sans-serif;font-size:20px;">${c.emoji || '🎬'} ${esc(c.nombre)}</strong>
+      <div class="coleccion-hero-badges">
+        ${c.destacada ? '<span>Destacada</span>' : ''}
+        ${c.derechos_sensibles !== false ? '<span>Solo catálogo</span>' : ''}
+      </div>
       ${c.descripcion ? `<p style="margin-top:6px;color:var(--olive);max-width:560px;margin-left:auto;margin-right:auto;">${esc(c.descripcion)}</p>` : ''}
       <button type="button" class="collection-share-btn" data-collection-url="${esc(collectionUrl)}">Copiar link de colección ↗</button>
     </div>
@@ -596,7 +604,7 @@ function renderRecienAgregado(products) {
   const list = document.getElementById('recien-agregado-list');
   if (!section || !list) return;
   const recientes = products
-    .filter(p => p.createdAt && !p.coleccion)
+    .filter(p => p.createdAt && (p.tipoItem || (p.coleccion ? 'diseno_coleccion' : 'producto_general')) === 'producto_general')
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 8);
   if (recientes.length < 3) { section.style.display = 'none'; return; }
@@ -1174,7 +1182,10 @@ function renderModalCarousel() {
   const dotsContainer = document.getElementById('pm-dots');
   const thumbsContainer = document.getElementById('pm-thumbs');
 
-  carousel.innerHTML = modalImages.map((src, i) => `<img src="${src}" class="pm-carousel-img loaded" alt="${esc(currentModalProductName)}${modalImages.length > 1 ? ` — foto ${i + 1} de ${modalImages.length}` : ''}" decoding="async">`).join('');
+  carousel.innerHTML = modalImages.map((src, i) => {
+    const priority = i === currentImageIndex ? 'loading="eager" fetchpriority="high"' : 'loading="lazy"';
+    return `<img src="${src}" class="pm-carousel-img loaded" alt="${esc(currentModalProductName)}${modalImages.length > 1 ? ` — foto ${i + 1} de ${modalImages.length}` : ''}" decoding="async" ${priority}>`;
+  }).join('');
   carousel.querySelectorAll('img').forEach(img => {
     if (img.complete && img.naturalWidth > 0) img.classList.add('loaded');
     img.addEventListener('error', () => {
@@ -1186,11 +1197,16 @@ function renderModalCarousel() {
   if (modalImages.length > 1) {
     dotsContainer.innerHTML = modalImages.map((_, i) => `<div class="pm-dot ${i === 0 ? 'active' : ''}"></div>`).join('');
     if (thumbsContainer) {
-      thumbsContainer.innerHTML = modalImages.map((src, i) => `
-        <button type="button" class="pm-thumb ${i === 0 ? 'active' : ''}" data-img-index="${i}" aria-label="Ver foto ${i + 1}">
-          <img src="${src}" alt="" loading="lazy">
+      thumbsContainer.innerHTML = modalImages.map((src, i) => {
+        const colorIndex = modalColorPairs.findIndex(pair => pair.image === src);
+        const label = colorIndex >= 0 ? colorLabel(modalColorPairs[colorIndex].color, colorIndex) : `Foto ${i + 1}`;
+        return `
+        <button type="button" class="pm-thumb ${i === 0 ? 'active' : ''}" data-img-index="${i}" aria-label="Ver ${esc(label)}">
+          <img src="${src}" alt="" loading="lazy" decoding="async">
+          <span>${esc(label)}</span>
         </button>
-      `).join('');
+      `;
+      }).join('');
       thumbsContainer.querySelectorAll('[data-img-index]').forEach(button => {
         button.addEventListener('click', () => {
           currentImageIndex = Number(button.dataset.imgIndex);

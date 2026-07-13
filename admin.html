@@ -1435,9 +1435,31 @@
               <span style="font-size:13px;">Activa (visible en el catálogo)</span>
             </label>
           </div>
+          <div class="form-group">
+            <label>Orden</label>
+            <input type="number" id="cf-orden" min="0" step="1" value="0" placeholder="0">
+          </div>
+          <div class="form-group full" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;">
+            <label style="display:flex;align-items:center;gap:8px;">
+              <input type="checkbox" id="cf-visible-catalogo" checked style="width:18px;height:18px;">
+              <span style="font-size:13px;">Visible en catálogo público</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;">
+              <input type="checkbox" id="cf-destacada" style="width:18px;height:18px;">
+              <span style="font-size:13px;">Destacada</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;">
+              <input type="checkbox" id="cf-derechos-sensibles" checked style="width:18px;height:18px;">
+              <span style="font-size:13px;">Solo catálogo / derechos sensibles</span>
+            </label>
+          </div>
           <div class="form-group full">
             <label>Descripción <small style="font-weight:400;color:#678d47">(aparece arriba del catálogo cuando esta colección está activa)</small></label>
             <textarea id="cf-descripcion" placeholder="Ej: Edición limitada inspirada en la nueva película. Diseños únicos por tiempo limitado."></textarea>
+          </div>
+          <div class="form-group full">
+            <label>Notas internas <small style="font-weight:400;color:#678d47">(no aparecen al cliente)</small></label>
+            <textarea id="cf-notas-admin" placeholder="Ej: revisar disponibilidad, proveedor, restricciones de publicación."></textarea>
           </div>
           <div class="form-group full">
             <label>Banner / portada (opcional) <small style="font-weight:400;color:#678d47">(recomendado 1600×400px o 2000×500px, proporción 4:1 — deja logo/texto dentro del centro seguro)</small></label>
@@ -1674,6 +1696,11 @@
       coleccion:            p.coleccion || '',
       grupo_diseno:         p.groupDesign || '',
       precio_estampado_desde: p.precioEstampadoDesde != null ? p.precioEstampadoDesde : null,
+      tipo_item:            p.tipoItem || (p.coleccion ? 'diseno_coleccion' : 'producto_general'),
+      orden:                Number.isFinite(Number(p.order)) ? Number(p.order) : 0,
+      visible_catalogo:     p.visibleCatalogo !== false,
+      notas_admin:          p.notasAdmin || '',
+      derechos_sensibles:   !!p.derechosSensibles,
       activo:               true
     };
   }
@@ -1699,7 +1726,12 @@
       mockClass:    r.mock_class || 'tote',
       coleccion:    r.coleccion || '',
       groupDesign:  r.grupo_diseno || '',
-      precioEstampadoDesde: r.precio_estampado_desde
+      precioEstampadoDesde: r.precio_estampado_desde,
+      tipoItem:     r.tipo_item || (r.coleccion ? 'diseno_coleccion' : 'producto_general'),
+      order:        Number(r.orden) || 0,
+      visibleCatalogo: r.visible_catalogo !== false,
+      notasAdmin:   r.notas_admin || '',
+      derechosSensibles: !!r.derechos_sensibles
     };
   }
 
@@ -1719,7 +1751,7 @@
 
   async function loadColecciones() {
     try {
-      const { data, error } = await sbClient.from('catalogo_colecciones').select('*').order('nombre');
+      const { data, error } = await sbClient.from('catalogo_colecciones').select('*').order('orden', { ascending: true }).order('nombre');
       if (error) throw error;
       _colecciones = data || [];
     } catch (e) {
@@ -1748,11 +1780,21 @@
         document.getElementById('cf-emoji').value = c.emoji || '';
         document.getElementById('cf-descripcion').value = c.descripcion || '';
         document.getElementById('cf-activa').checked = c.activa !== false;
+        document.getElementById('cf-orden').value = Number(c.orden) || 0;
+        document.getElementById('cf-visible-catalogo').checked = c.visible_catalogo !== false;
+        document.getElementById('cf-destacada').checked = !!c.destacada;
+        document.getElementById('cf-derechos-sensibles').checked = c.derechos_sensibles !== false;
+        document.getElementById('cf-notas-admin').value = c.notas_admin || '';
         currentColeccionBanner = c.banner_url || '';
         renderColeccionBannerPreview();
       }
     } else {
       document.getElementById('cf-activa').checked = true;
+      document.getElementById('cf-orden').value = 0;
+      document.getElementById('cf-visible-catalogo').checked = true;
+      document.getElementById('cf-destacada').checked = false;
+      document.getElementById('cf-derechos-sensibles').checked = true;
+      document.getElementById('cf-notas-admin').value = '';
     }
 
     document.getElementById('coleccion-modal-overlay').classList.add('open');
@@ -1810,6 +1852,11 @@
     const emoji = document.getElementById('cf-emoji').value.trim() || '🎬';
     const descripcion = document.getElementById('cf-descripcion').value.trim();
     const activa = document.getElementById('cf-activa').checked;
+    const orden = parseInt(document.getElementById('cf-orden').value, 10) || 0;
+    const visible_catalogo = document.getElementById('cf-visible-catalogo').checked;
+    const destacada = document.getElementById('cf-destacada').checked;
+    const derechos_sensibles = document.getElementById('cf-derechos-sensibles').checked;
+    const notas_admin = document.getElementById('cf-notas-admin').value.trim();
 
     if (!nombre) { showToast('⚠️ Ponle nombre a la colección'); return; }
 
@@ -1823,13 +1870,15 @@
           return;
         }
         const { error } = await sbClient.from('catalogo_colecciones').insert({
-          id, nombre, emoji, descripcion, banner_url: currentColeccionBanner, activa
+          id, nombre, emoji, descripcion, banner_url: currentColeccionBanner, activa,
+          orden, visible_catalogo, destacada, derechos_sensibles, notas_admin
         });
         if (error) throw error;
         showToast('✅ Colección creada');
       } else {
         const { error } = await sbClient.from('catalogo_colecciones')
-          .update({ nombre, emoji, descripcion, banner_url: currentColeccionBanner, activa })
+          .update({ nombre, emoji, descripcion, banner_url: currentColeccionBanner, activa,
+            orden, visible_catalogo, destacada, derechos_sensibles, notas_admin })
           .eq('id', editingColeccionId);
         if (error) throw error;
         showToast('✅ Colección actualizada');
@@ -2251,6 +2300,11 @@
         mock_class: 'tshirt',
         coleccion: d.coleccionId || null,
         grupo_diseno: d.name,
+        tipo_item: d.coleccionId ? 'diseno_coleccion' : 'producto_general',
+        orden: 0,
+        visible_catalogo: true,
+        notas_admin: '',
+        derechos_sensibles: !!d.coleccionId,
         activo: true
       };
 
@@ -2364,6 +2418,9 @@
         price_max: priceMax === '' ? null : Number(priceMax),
         precio_estampado_desde: precioEstampado === '' ? null : Number(precioEstampado),
         badge,
+        tipo_item: coleccion ? 'diseno_coleccion' : 'producto_general',
+        visible_catalogo: true,
+        derechos_sensibles: !!coleccion,
         descripcion: descBase || `Diseño ${designName}${cut ? `, corte ${cut}` : ''}.`
       };
       await supaAdmin('PATCH', 'catalogo_productos', row, `?id=eq.${product.id}`);
@@ -2385,6 +2442,12 @@
     el.innerHTML = _colecciones.map(c => {
       const productos = allProducts.filter(p => p.coleccion === c.id);
       const grupos = buildAdminRows(productos).filter(row => row.type === 'group');
+      const statusBits = [
+        c.visible_catalogo === false ? 'oculta público' : 'visible público',
+        c.destacada ? 'destacada' : '',
+        c.derechos_sensibles !== false ? 'solo catálogo' : '',
+        `orden ${Number(c.orden) || 0}`
+      ].filter(Boolean).join(' · ');
       return `
       <div style="border:2px solid var(--forest); border-radius:16px; padding:14px; width:100%; ${c.activa === false ? 'opacity:.55' : ''}">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
@@ -2395,6 +2458,7 @@
             <span class="admin-swatch-remove" onclick="deleteColeccion('${c.id}')" title="Eliminar">✕</span>
           </span>
         </div>
+        <div style="font-size:11px;color:var(--olive);font-weight:800;margin-top:4px;">${esc(statusBits)}</div>
         ${grupos.length ? `
           <details style="margin-top:8px;">
             <summary style="cursor:pointer; font-size:12px; color:var(--forest); font-weight:800;">Ver diseños de esta colección</summary>
@@ -2665,7 +2729,7 @@
     renderColeccionList();
     renderPendingChips(allList);
 
-    let displayList = allList.filter(p => !p.coleccion);
+    let displayList = allList.filter(p => (p.tipoItem || (p.coleccion ? 'diseno_coleccion' : 'producto_general')) === 'producto_general');
     if (currentAdminFilter !== 'todos') {
       displayList = displayList.filter(p => p.category === currentAdminFilter);
     }
@@ -3239,7 +3303,9 @@
     if (!badge && !badgeWarningConfirmed) { openBadgeConfirm(); return; }
     badgeWarningConfirmed = false;
 
+    const tipoItem = coleccion ? 'diseno_coleccion' : 'producto_general';
     const product = { name, category, price, priceMin, priceMax, sizeGuide, desc, badge, badgePos, color, coleccion, groupDesign: currentGroupDesign, precioEstampadoDesde,
+                      tipoItem, visibleCatalogo: true, derechosSensibles: tipoItem === 'diseno_coleccion',
                       colors: selectedColors, mainImage: currentMainImage, galleryImages: currentGallery };
     const row = toRow(product);
 

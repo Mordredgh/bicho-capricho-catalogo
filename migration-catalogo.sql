@@ -62,3 +62,32 @@ WHERE table_name = 'products'
     'color_representativo','colores','size_guide','free_shipping'
   )
 ORDER BY column_name;
+
+-- 2026-07-13: Separación formal catálogo general vs diseños de colección.
+-- Evita depender del nombre visible ("Buzz - Hombre") para agrupar variantes.
+ALTER TABLE public.catalogo_productos
+  ADD COLUMN IF NOT EXISTS tipo_item text NOT NULL DEFAULT 'producto_general',
+  ADD COLUMN IF NOT EXISTS orden integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS visible_catalogo boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS notas_admin text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS derechos_sensibles boolean NOT NULL DEFAULT false;
+
+ALTER TABLE public.catalogo_colecciones
+  ADD COLUMN IF NOT EXISTS orden integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS destacada boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS visible_catalogo boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS derechos_sensibles boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS notas_admin text NOT NULL DEFAULT '';
+
+UPDATE public.catalogo_productos
+SET tipo_item = CASE
+  WHEN coalesce(coleccion, '') <> '' THEN 'diseno_coleccion'
+  ELSE 'producto_general'
+END
+WHERE tipo_item IS NULL OR tipo_item = 'producto_general';
+
+CREATE INDEX IF NOT EXISTS idx_catalogo_productos_tipo_visible_orden
+  ON public.catalogo_productos (tipo_item, visible_catalogo, orden);
+
+CREATE INDEX IF NOT EXISTS idx_catalogo_colecciones_visible_orden
+  ON public.catalogo_colecciones (visible_catalogo, orden);
