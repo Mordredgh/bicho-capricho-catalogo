@@ -2907,7 +2907,7 @@ body:not(.product-modal-open) .p-modal-overlay { pointer-events: none !important
   top: 24px;
   width: 260px;
   height: 74px;
-  background: url("assets/logo-bicho-capricho.webp") left center / contain no-repeat;
+  background: url("/assets/logo-bicho-capricho.webp") left center / contain no-repeat;
   opacity: 1;
   z-index: 30;
   filter: drop-shadow(0 2px 8px rgba(255, 253, 248, .75));
