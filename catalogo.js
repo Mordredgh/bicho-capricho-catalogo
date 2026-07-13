@@ -630,7 +630,7 @@ function renderVistosRecientes() {
   const list = document.getElementById('vistos-list');
   if (!section || !list || !allProducts.length) return;
   const vistos = getRecentViewedIds()
-    .map(id => allProducts.find(p => p.id === id))
+    .map(id => (window._catalogDisplayProducts && window._catalogDisplayProducts.get(id)) || allProducts.find(p => p.id === id))
     .filter(Boolean)
     .slice(0, 8);
   if (!vistos.length) {
@@ -640,7 +640,7 @@ function renderVistosRecientes() {
   }
   section.style.display = 'block';
   list.innerHTML = vistos.map(p => `
-    <button type="button" class="crosssell-card recent-view-card" style="flex:0 0 140px; cursor:pointer; border:0; text-align:left;" onclick='openProductModal(allProducts.find(x=>x.id==="${p.id}"))'>
+    <button type="button" class="crosssell-card recent-view-card" style="flex:0 0 140px; cursor:pointer; border:0; text-align:left;" onclick='openProductModal((window._catalogDisplayProducts && window._catalogDisplayProducts.get("${p.id}")) || allProducts.find(x=>x.id==="${p.id}"))'>
       <img src="${p.mainImage || 'assets/favicon-180.png'}" alt="${esc(p.name)}" loading="lazy" style="width:100%;height:100px;object-fit:cover;border-radius:10px;">
       <p style="font-size:12px;font-weight:800;margin:6px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.displayName || p.name)}</p>
       <p style="font-size:12px;color:var(--grape);font-weight:700;">${esc(p.price)}</p>
