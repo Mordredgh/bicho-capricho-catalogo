@@ -34,6 +34,12 @@ window.changeCardImage = function(e, swatch, imgUrl) {
   swatch.classList.add('active');
 };
 
+function handleCardSwatchClick(event) {
+  const swatch = event.target.closest('.swatch-dot');
+  if (!swatch) return;
+  changeCardImage(event, swatch, swatch.dataset.img || '');
+}
+
 // Convierte nombre de categoría a slug — usa el id de Supabase directamente si está disponible
 function catToSlug(name, id) {
   if (id) return id; // Supabase category IDs ya son slugs limpios
@@ -254,8 +260,7 @@ function createCardHTML(p, index) {
         // La primera foto es la principal, las siguientes corresponden a la galería
         const targetImgRaw = i === 0 ? p.mainImage : (p.galleryImages && p.galleryImages[i - 1]) || p.mainImage;
         const targetImg = optimizedImageUrl(targetImgRaw, 'card');
-        const clickAttr = targetImg ? `onclick="changeCardImage(event, this, '${targetImg.replace(/'/g, "\\'")}')"` : 'onclick="event.stopPropagation();"';
-        return `<span class="swatch-dot ${classAttr} ${i === 0 ? 'active' : ''}" ${styleAttr} ${clickAttr} title="Disponible en ${c}"></span>`;
+        return `<button type="button" class="swatch-dot ${classAttr} ${i === 0 ? 'active' : ''}" ${styleAttr} data-img="${esc(targetImg || '')}" title="Disponible en ${esc(c)}" aria-label="Ver color ${esc(c)}"></button>`;
       }).join('')}
     </div>
   ` : '';
@@ -313,8 +318,12 @@ const sliderState = {
 };
 
 function bindRenderedCards(slider) {
+  slider.querySelectorAll('.swatch-dot').forEach(button => {
+    button.addEventListener('click', handleCardSwatchClick);
+  });
   slider.querySelectorAll('.catalog-card').forEach(card => {
     card.addEventListener('click', (e) => {
+      if (e.target.closest('.swatch-dot, .card-compare-btn, [data-no-card-open]')) return;
       spawnDoodleConfetti(e.pageX, e.pageY);
       const product = window._catalogDisplayProducts.get(card.dataset.productId) || allProducts.find(p => p.id && p.id === card.dataset.productId);
       if (product) openProductModal(product);
