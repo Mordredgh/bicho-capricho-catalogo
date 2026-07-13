@@ -713,7 +713,7 @@ function syncActiveModalColor() {
 }
 
 function setupModalImageZoom() {
-  const gallery = document.getElementById('pm-gallery');
+  const gallery = document.querySelector('.p-modal-gallery');
   if (!gallery) return;
   let lens = gallery.querySelector('.pm-zoom-lens');
   if (!lens) {
