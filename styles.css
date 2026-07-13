@@ -2785,7 +2785,7 @@ footer{background:var(--forest);color:var(--cream);padding:80px 0 25px}.footer-m
   pointer-events: auto;
 }
 .pm-carousel.zooming .pm-carousel-img.is-active {
-  transform: scale(1.28);
+  transform: scale(1.16);
   filter: drop-shadow(0 30px 38px rgba(28, 79, 50, .2));
 }
 .p-modal-gallery,
