@@ -605,8 +605,8 @@
       box-shadow: 2px 3px 0 rgba(28,79,50,.25); transition: .15s;
     }
     .design-remove-btn:hover { transform: scale(1.08) rotate(8deg); }
-    .design-card-body { display: flex; gap: 30px; flex-wrap: wrap; padding: 10px 26px 26px; }
-    .design-editor-col { flex: 0 0 240px; }
+    .design-card-body { display: grid; grid-template-columns: minmax(320px, 390px) minmax(360px, 1fr); gap: 30px; padding: 10px 26px 26px; align-items: start; }
+    .design-editor-col { min-width: 0; }
     .design-editor-hint { font-size: 12px; color: var(--olive); margin-bottom: 10px; font-weight: 700; line-height: 1.4; }
     .design-mockup-select, .design-coleccion-select {
       appearance: none; -webkit-appearance: none;
@@ -620,15 +620,36 @@
       box-shadow: 0 2px 5px rgba(28,79,50,.06);
     }
     .design-canvas-frame {
-      background: var(--white); border-radius: 14px; padding: 10px; width: fit-content;
-      box-shadow: 0 6px 18px rgba(28,79,50,.16); transform: rotate(-1.2deg);
+      background: var(--white); border-radius: 18px; padding: 14px; width: fit-content;
+      box-shadow: 0 14px 34px rgba(28,79,50,.14); transform: none;
     }
-    .design-canvas-frame canvas { display: block; cursor: move; touch-action: none; border-radius: 8px; }
+    .design-canvas-frame canvas { display: block; cursor: move; touch-action: none; border-radius: 12px; width: 340px; height: 420px; max-width: 100%; }
     .design-readout { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
     .design-readout span {
       background: rgba(195,236,159,.55); color: var(--forest); font: 800 11px 'Nunito';
       padding: 4px 11px; border-radius: 999px;
     }
+    .design-manual-controls {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px;
+    }
+    .design-control {
+      background: rgba(255,255,255,.72); border: 1.5px solid rgba(28,79,50,.14);
+      border-radius: 14px; padding: 9px 10px; box-shadow: 0 5px 14px rgba(28,79,50,.06);
+    }
+    .design-control label {
+      display:block; margin-bottom:5px; color:var(--olive); font:900 9px 'Nunito';
+      text-transform:uppercase; letter-spacing:.55px;
+    }
+    .design-control input {
+      width:100%; border:0; background:transparent; color:var(--forest);
+      font:900 17px 'Fredoka'; outline:none;
+    }
+    .design-quick-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+    .design-quick-actions button {
+      border:1.5px solid rgba(28,79,50,.22); background:var(--white); color:var(--forest);
+      border-radius:999px; padding:7px 12px; cursor:pointer; font:900 11px 'Nunito';
+    }
+    .design-quick-actions button:hover { background:var(--forest); color:var(--white); }
     .design-config-col { flex: 1; min-width: 260px; }
     .design-field-label {
       font: 800 10px 'Nunito'; text-transform: uppercase; letter-spacing: .6px;
@@ -704,6 +725,13 @@
       cursor: pointer; padding: 3px 9px; border-radius: 999px; transition: .15s;
     }
     .design-cut-bulk button:hover { background: var(--grape); color: var(--white); }
+    @media (max-width: 980px) {
+      .design-card-body { grid-template-columns: 1fr; }
+      .design-canvas-frame canvas { width: min(340px, calc(100vw - 94px)); height: auto; aspect-ratio: 340 / 420; }
+    }
+    @media (max-width: 560px) {
+      .design-manual-controls { grid-template-columns: 1fr; }
+    }
 
     /* ── SCRAPBOOK BOUTIQUE UPGRADES ── */
     
@@ -1586,13 +1614,16 @@
         name: displayName,
         img,
         scale: 0.55,
+        offsetX: 0.50,
         offsetY: 0.22,
         previewMockupId: _mockups.length ? _mockups[0].id : null,
         previewMockupImg: null,
         selectedMockupIds,
         coleccionId: '',
         mode: null,
+        dragStartX: 0,
         dragStartY: 0,
+        dragStartOffsetX: 0,
         dragStartOffsetY: 0
       });
     }
@@ -1633,10 +1664,59 @@
   function designBounds(d, canvas) {
     const dW = canvas.width * d.scale;
     const dH = dW * (d.img.naturalHeight / d.img.naturalWidth);
-    const dX = (canvas.width - dW) / 2;
+    const centerX = canvas.width * (d.offsetX ?? 0.5);
+    const dX = centerX - dW / 2;
     const dY = canvas.height * d.offsetY;
     return { dX, dY, dW, dH };
   }
+
+  function clampDesignGeometry(d) {
+    d.scale = Math.min(1.2, Math.max(0.08, Number(d.scale) || 0.55));
+    d.offsetX = Math.min(1, Math.max(0, Number(d.offsetX ?? 0.5)));
+    d.offsetY = Math.min(0.9, Math.max(0, Number(d.offsetY) || 0));
+  }
+
+  function setDesignManualValue(localId, key, value) {
+    const d = _pendingDesigns.find(x => x.localId === localId);
+    if (!d) return;
+    const n = Number(value);
+    if (!Number.isFinite(n)) return;
+    if (key === 'scale') d.scale = n / 100;
+    if (key === 'offsetX') d.offsetX = n / 100;
+    if (key === 'offsetY') d.offsetY = n / 100;
+    clampDesignGeometry(d);
+    drawDesignCanvas(localId);
+  }
+  window.setDesignManualValue = setDesignManualValue;
+
+  function nudgeDesignValue(localId, key, deltaPct) {
+    const d = _pendingDesigns.find(x => x.localId === localId);
+    if (!d) return;
+    if (key === 'scale') d.scale += deltaPct / 100;
+    if (key === 'offsetX') d.offsetX += deltaPct / 100;
+    if (key === 'offsetY') d.offsetY += deltaPct / 100;
+    clampDesignGeometry(d);
+    drawDesignCanvas(localId);
+  }
+  window.nudgeDesignValue = nudgeDesignValue;
+
+  function resetDesignPlacement(localId) {
+    const d = _pendingDesigns.find(x => x.localId === localId);
+    if (!d) return;
+    d.scale = 0.55;
+    d.offsetX = 0.5;
+    d.offsetY = 0.22;
+    drawDesignCanvas(localId);
+  }
+  window.resetDesignPlacement = resetDesignPlacement;
+
+  function centerDesignPlacement(localId) {
+    const d = _pendingDesigns.find(x => x.localId === localId);
+    if (!d) return;
+    d.offsetX = 0.5;
+    drawDesignCanvas(localId);
+  }
+  window.centerDesignPlacement = centerDesignPlacement;
 
   function drawDesignCanvas(localId) {
     const d = _pendingDesigns.find(x => x.localId === localId);
@@ -1662,8 +1742,15 @@
     ctx.fill();
     const scaleTxt = document.getElementById(`design-scale-txt-${localId}`);
     const offsetTxt = document.getElementById(`design-offset-txt-${localId}`);
+    const scaleInput = document.getElementById(`design-scale-input-${localId}`);
+    const offsetXInput = document.getElementById(`design-offset-x-input-${localId}`);
+    const offsetYInput = document.getElementById(`design-offset-y-input-${localId}`);
+    const offsetX = d.offsetX ?? 0.5;
     if (scaleTxt) scaleTxt.textContent = Math.round(d.scale * 100) + '%';
-    if (offsetTxt) offsetTxt.textContent = Math.round(d.offsetY * 100) + '%';
+    if (offsetTxt) offsetTxt.textContent = `${Math.round(offsetX * 100)}% / ${Math.round(d.offsetY * 100)}%`;
+    if (scaleInput) scaleInput.value = Math.round(d.scale * 100);
+    if (offsetXInput) offsetXInput.value = Math.round(offsetX * 100);
+    if (offsetYInput) offsetYInput.value = Math.round(d.offsetY * 100);
   }
 
   function canvasPoint(canvas, e) {
@@ -1686,7 +1773,9 @@
         d.mode = 'resize';
       } else if (p.x >= dX && p.x <= dX + dW && p.y >= dY && p.y <= dY + dH) {
         d.mode = 'drag';
+        d.dragStartX = p.x;
         d.dragStartY = p.y;
+        d.dragStartOffsetX = d.offsetX ?? 0.5;
         d.dragStartOffsetY = d.offsetY;
       } else {
         return;
@@ -1698,12 +1787,15 @@
       if (!d || !d.mode) return;
       const p = canvasPoint(canvas, e);
       if (d.mode === 'drag') {
+        const deltaX = (p.x - d.dragStartX) / canvas.width;
         const deltaY = (p.y - d.dragStartY) / canvas.height;
+        d.offsetX = Math.min(1, Math.max(0, d.dragStartOffsetX + deltaX));
         d.offsetY = Math.min(0.7, Math.max(0, d.dragStartOffsetY + deltaY));
       } else if (d.mode === 'resize') {
         const newDW = Math.abs(p.x - canvas.width / 2) * 2;
-        d.scale = Math.min(1, Math.max(0.15, newDW / canvas.width));
+        d.scale = Math.min(1.2, Math.max(0.08, newDW / canvas.width));
       }
+      clampDesignGeometry(d);
       drawDesignCanvas(localId);
       e.preventDefault();
     };
@@ -1744,16 +1836,36 @@
         </div>
         <div class="design-card-body">
           <div class="design-editor-col">
-            <span class="design-editor-hint">Arrastra para mover · arrastra la esquina 🔵 para escalar</span>
+            <span class="design-editor-hint">Arrastra para mover · arrastra la esquina azul para escalar. También puedes escribir valores exactos.</span>
             <select class="design-mockup-select" onchange="setDesignPreviewMockup('${d.localId}', this.value)">
               ${_mockups.map(m => `<option value="${m.id}" ${m.id === d.previewMockupId ? 'selected' : ''}>${esc(m.nombre)}</option>`).join('')}
             </select>
             <div class="design-canvas-frame">
-              <canvas id="design-canvas-${d.localId}" width="220" height="270"></canvas>
+              <canvas id="design-canvas-${d.localId}" width="340" height="420"></canvas>
             </div>
             <div class="design-readout">
               <span>Tamaño <span id="design-scale-txt-${d.localId}">55%</span></span>
-              <span>Posición <span id="design-offset-txt-${d.localId}">22%</span></span>
+              <span>Posición <span id="design-offset-txt-${d.localId}">50% / 22%</span></span>
+            </div>
+            <div class="design-manual-controls">
+              <div class="design-control">
+                <label for="design-scale-input-${d.localId}">Tamaño %</label>
+                <input id="design-scale-input-${d.localId}" type="number" min="8" max="120" step="1" value="${Math.round(d.scale * 100)}" onchange="setDesignManualValue('${d.localId}', 'scale', this.value)" oninput="setDesignManualValue('${d.localId}', 'scale', this.value)">
+              </div>
+              <div class="design-control">
+                <label for="design-offset-x-input-${d.localId}">X centro %</label>
+                <input id="design-offset-x-input-${d.localId}" type="number" min="0" max="100" step="1" value="${Math.round((d.offsetX ?? 0.5) * 100)}" onchange="setDesignManualValue('${d.localId}', 'offsetX', this.value)" oninput="setDesignManualValue('${d.localId}', 'offsetX', this.value)">
+              </div>
+              <div class="design-control">
+                <label for="design-offset-y-input-${d.localId}">Y arriba %</label>
+                <input id="design-offset-y-input-${d.localId}" type="number" min="0" max="90" step="1" value="${Math.round(d.offsetY * 100)}" onchange="setDesignManualValue('${d.localId}', 'offsetY', this.value)" oninput="setDesignManualValue('${d.localId}', 'offsetY', this.value)">
+              </div>
+            </div>
+            <div class="design-quick-actions">
+              <button type="button" onclick="nudgeDesignValue('${d.localId}', 'scale', -2)">Tamaño -</button>
+              <button type="button" onclick="nudgeDesignValue('${d.localId}', 'scale', 2)">Tamaño +</button>
+              <button type="button" onclick="centerDesignPlacement('${d.localId}')">Centrar X</button>
+              <button type="button" onclick="resetDesignPlacement('${d.localId}')">Reset</button>
             </div>
           </div>
           <div class="design-config-col">
@@ -1844,7 +1956,7 @@
           ctx.drawImage(mockupImg, 0, 0);
           const dW = canvas.width * d.scale;
           const dH = dW * (d.img.naturalHeight / d.img.naturalWidth);
-          const dX = (canvas.width - dW) / 2;
+          const dX = canvas.width * (d.offsetX ?? 0.5) - dW / 2;
           const dY = canvas.height * d.offsetY;
           ctx.drawImage(d.img, dX, dY, dW, dH);
           const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', 0.9));
