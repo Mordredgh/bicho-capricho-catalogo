@@ -549,7 +549,7 @@ function renderColeccionBanner(id) {
   }
   coleccionBannerEl.style.display = '';
   coleccionBannerEl.innerHTML = `
-    ${c.banner_url ? `<img src="${c.banner_url}" alt="${esc(c.nombre)}" loading="lazy" style="width:100%;max-height:260px;object-fit:cover;border-radius:20px;margin-bottom:14px;">` : ''}
+    ${c.banner_url ? `<img class="coleccion-hero-banner-img" src="${c.banner_url}" alt="${esc(c.nombre)}" loading="lazy">` : ''}
     <div style="text-align:center;margin-bottom:18px;">
       <strong style="font-family:'Fredoka',sans-serif;font-size:20px;">${c.emoji || '🎬'} ${esc(c.nombre)}</strong>
       ${c.descripcion ? `<p style="margin-top:6px;color:var(--olive);max-width:560px;margin-left:auto;margin-right:auto;">${esc(c.descripcion)}</p>` : ''}
