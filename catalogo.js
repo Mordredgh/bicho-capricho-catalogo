@@ -713,45 +713,26 @@ function syncActiveModalColor() {
 }
 
 function setupModalImageZoom() {
-  const gallery = document.querySelector('.p-modal-gallery');
-  if (!gallery) return;
-  let lens = gallery.querySelector('.pm-zoom-lens');
-  if (!lens) {
-    lens = document.createElement('div');
-    lens.className = 'pm-zoom-lens';
-    gallery.appendChild(lens);
-  }
+  const carousel = document.getElementById('pm-carousel');
+  if (!carousel) return;
   const clearZoom = () => {
-    gallery.classList.remove('zooming');
-    gallery.style.removeProperty('--zoom-x');
-    gallery.style.removeProperty('--zoom-y');
-    if (lens) {
-      lens.style.removeProperty('left');
-      lens.style.removeProperty('top');
-      lens.style.removeProperty('background-image');
-      lens.style.removeProperty('background-position');
-      lens.style.removeProperty('background-size');
-    }
+    carousel.classList.remove('zooming');
+    carousel.querySelectorAll('.pm-carousel-img').forEach(img => {
+      img.style.removeProperty('transform-origin');
+    });
   };
-  gallery.onmousemove = (e) => {
-    const img = gallery.querySelector('.pm-carousel-img.is-active');
+  carousel.onmousemove = (e) => {
+    const img = carousel.querySelector('.pm-carousel-img.is-active');
     if (!img) return clearZoom();
     const rect = img.getBoundingClientRect();
-    const galleryRect = gallery.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return clearZoom();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
     if (x < 0 || x > 100 || y < 0 || y > 100) return clearZoom();
-    gallery.classList.add('zooming');
-    gallery.style.setProperty('--zoom-x', `${x}%`);
-    gallery.style.setProperty('--zoom-y', `${y}%`);
-    lens.style.left = `${e.clientX - galleryRect.left}px`;
-    lens.style.top = `${e.clientY - galleryRect.top}px`;
-    lens.style.backgroundImage = `url("${img.currentSrc || img.src}")`;
-    lens.style.backgroundSize = '145%';
-    lens.style.backgroundPosition = `${x}% ${y}%`;
+    carousel.classList.add('zooming');
+    img.style.transformOrigin = `${x}% ${y}%`;
   };
-  gallery.onmouseleave = clearZoom;
+  carousel.onmouseleave = clearZoom;
 }
 
 function openProductModal(product) {
@@ -1094,7 +1075,7 @@ function renderModalCarousel() {
 
 function updateCarouselPos() {
   const carousel = document.getElementById('pm-carousel');
-  carousel.style.transform = `translateX(-${currentImageIndex * 100}%)`;
+  carousel.style.removeProperty('transform');
   carousel.querySelectorAll('.pm-carousel-img').forEach((img, i) => {
     img.classList.toggle('is-active', i === currentImageIndex);
   });
