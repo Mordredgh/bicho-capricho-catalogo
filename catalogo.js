@@ -728,6 +728,9 @@ function setupModalImageZoom() {
     if (lens) {
       lens.style.removeProperty('left');
       lens.style.removeProperty('top');
+      lens.style.removeProperty('background-image');
+      lens.style.removeProperty('background-position');
+      lens.style.removeProperty('background-size');
     }
   };
   gallery.onmousemove = (e) => {
@@ -744,7 +747,9 @@ function setupModalImageZoom() {
     gallery.style.setProperty('--zoom-y', `${y}%`);
     lens.style.left = `${e.clientX - galleryRect.left}px`;
     lens.style.top = `${e.clientY - galleryRect.top}px`;
-    img.style.transformOrigin = `${x}% ${y}%`;
+    lens.style.backgroundImage = `url("${img.currentSrc || img.src}")`;
+    lens.style.backgroundSize = '145%';
+    lens.style.backgroundPosition = `${x}% ${y}%`;
   };
   gallery.onmouseleave = clearZoom;
 }
@@ -1092,7 +1097,6 @@ function updateCarouselPos() {
   carousel.style.transform = `translateX(-${currentImageIndex * 100}%)`;
   carousel.querySelectorAll('.pm-carousel-img').forEach((img, i) => {
     img.classList.toggle('is-active', i === currentImageIndex);
-    if (i !== currentImageIndex) img.style.removeProperty('transform-origin');
   });
   
   document.querySelectorAll('.pm-dot').forEach((dot, i) => {
