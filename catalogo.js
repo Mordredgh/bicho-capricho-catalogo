@@ -628,41 +628,15 @@ function renderRecienAgregado(products) {
 }
 
 function getRecentViewedIds() {
-  try {
-    return JSON.parse(localStorage.getItem('bc_recent_viewed') || '[]');
-  } catch {
-    return [];
-  }
+  return [];
 }
 
 function saveRecentViewed(product) {
-  if (!product?.id) return;
-  const ids = [product.id, ...getRecentViewedIds().filter(id => id !== product.id)].slice(0, 8);
-  localStorage.setItem('bc_recent_viewed', JSON.stringify(ids));
-  renderVistosRecientes();
+  // Desactivado: la sección "Vistos recientemente" se retiró del catálogo.
 }
 
 function renderVistosRecientes() {
-  const section = document.getElementById('vistos-section');
-  const list = document.getElementById('vistos-list');
-  if (!section || !list || !allProducts.length) return;
-  const vistos = getRecentViewedIds()
-    .map(id => (window._catalogDisplayProducts && window._catalogDisplayProducts.get(id)) || allProducts.find(p => p.id === id))
-    .filter(Boolean)
-    .slice(0, 8);
-  if (!vistos.length) {
-    section.style.display = 'none';
-    list.innerHTML = '';
-    return;
-  }
-  section.style.display = 'block';
-  list.innerHTML = vistos.map(p => `
-    <button type="button" class="crosssell-card recent-view-card" style="flex:0 0 140px; cursor:pointer; border:0; text-align:left;" onclick='openProductModal((window._catalogDisplayProducts && window._catalogDisplayProducts.get("${p.id}")) || allProducts.find(x=>x.id==="${p.id}"))'>
-      <img src="${optimizedImageUrl(p.mainImage || 'assets/favicon-180.png', 'thumb')}" alt="${esc(p.name)}" loading="lazy" decoding="async" style="width:100%;height:100px;object-fit:cover;border-radius:10px;">
-      <p style="font-size:12px;font-weight:800;margin:6px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.displayName || p.name)}</p>
-      <p style="font-size:12px;color:var(--grape);font-weight:700;">${esc(p.price)}</p>
-    </button>
-  `).join('');
+  // Desactivado: la sección "Vistos recientemente" se retiró del catálogo.
 }
 
 // Permite compartir un link directo a un producto: ?producto=<id>
@@ -1332,7 +1306,7 @@ function closeProductModal() {
     productModalCloseTimer = null;
     resetModalImageZoom();
     if (modalTriggerEl && typeof modalTriggerEl.focus === 'function') modalTriggerEl.focus();
-  }, 380);
+  }, 90);
 }
 document.getElementById('p-modal-close').addEventListener('click', closeProductModal);
 document.getElementById('p-modal-overlay').addEventListener('click', e => {
@@ -1897,10 +1871,10 @@ function buildCrossSell(product) {
     const thumb = p.mainImage
       ? `<img src="${p.mainImage}" alt="${esc(p.name)}" loading="lazy">`
       : `<div class="cs-visual">✦</div>`;
-    return `<div class="crosssell-card" onclick="openProductModal(window.__csProducts['${p.name.replace(/'/g, "\\'")}'?p.name:p.name]); closeProductModal(); setTimeout(()=>openProductModal(window.__allProd.find(x=>x.name==='${p.name.replace(/'/g, "\\'")}')), 420)">
+    return `<button type="button" class="crosssell-card" data-crosssell-id="${esc(p.id || '')}" aria-label="Ver ${esc(p.name)}">
       ${thumb}
       <span>${esc(p.name)}</span>
-    </div>`;
+    </button>`;
   }).join('');
 
   return `<div class="pm-crosssell">
@@ -1908,7 +1882,16 @@ function buildCrossSell(product) {
     <div class="pm-crosssell-list">${cards}</div>
   </div>`;
 }
-// Exponer allProducts para el cross-sell onclick
+document.addEventListener('click', (event) => {
+  const card = event.target.closest('[data-crosssell-id]');
+  if (!card) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const product = allProducts.find(item => String(item.id) === String(card.dataset.crosssellId));
+  if (product) openProductModal(product);
+});
+
+// Exponer allProducts para usos internos/debug
 Object.defineProperty(window, '__allProd', { get: () => allProducts });
 
 
