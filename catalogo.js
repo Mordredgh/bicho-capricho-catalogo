@@ -743,13 +743,27 @@ const IMAGE_PRESETS = {
 };
 
 function optimizedImageUrl(src, preset = 'card') {
-  // Fluidez primero: Supabase render/image reduce bytes, pero su primera
-  // transformación puede sentirse más lenta. Mantenemos URL directa/cacheada.
-  return src;
+  if (!src || typeof src !== 'string') return src;
+  const cfg = IMAGE_PRESETS[preset] || IMAGE_PRESETS.card;
+  return optimizedImageUrlByWidth(src, cfg.width, cfg.quality);
 }
 
 function optimizedImageUrlByWidth(src, width, quality = 76) {
-  return src;
+  if (!src || typeof src !== 'string') return src;
+  try {
+    const url = new URL(src, window.location.origin);
+    const objectSegment = '/storage/v1/object/public/';
+    const renderSegment = '/storage/v1/render/image/public/';
+    if (!url.pathname.includes(objectSegment) && !url.pathname.includes(renderSegment)) return src;
+    if (/\.(svg|gif)$/i.test(url.pathname)) return src;
+    url.pathname = url.pathname.replace(objectSegment, renderSegment);
+    url.searchParams.set('width', String(width));
+    url.searchParams.set('quality', String(quality));
+    url.searchParams.set('resize', 'contain');
+    return url.toString();
+  } catch {
+    return src;
+  }
 }
 
 function buildOptimizedProductImages(product, preset = 'modal') {
@@ -757,23 +771,9 @@ function buildOptimizedProductImages(product, preset = 'modal') {
 }
 
 function imageSrcsetAttr(src, widths = [360, 720, 1100], quality = 76) {
-  return '';
-}
-
-function preloadModalImages() {
-  const queue = modalImages.filter((src, index) => src && index !== currentImageIndex);
-  const run = () => {
-    queue.forEach(src => {
-      const img = new Image();
-      img.decoding = 'async';
-      img.src = src;
-    });
-  };
-  if ('requestIdleCallback' in window) {
-    requestIdleCallback(run, { timeout: 1200 });
-  } else {
-    setTimeout(run, 250);
-  }
+  if (!src || typeof src !== 'string' || !src.includes('/storage/v1/')) return '';
+  const srcset = widths.map(width => `${optimizedImageUrlByWidth(src, width, quality)} ${width}w`).join(', ');
+  return ` srcset="${esc(srcset)}"`;
 }
 
 function colorToCss(color) {
@@ -1289,7 +1289,6 @@ function renderModalCarousel() {
   
   setupModalImageZoom();
   updateCarouselPos();
-  preloadModalImages();
 }
 
 function updateCarouselPos() {
