@@ -121,12 +121,10 @@ async function loadProducts() {
         createdAt:    p.created_at || ''
       }));
 
-      // Solo mostrar colecciones que de verdad tienen al menos un producto activo
-      const coleccionesConProductos = colecciones.filter(c =>
-        allProducts.some(p => p.coleccion === c.id)
-      );
-      _coleccionesData = coleccionesConProductos;
-      renderColeccionFilterButtons(coleccionesConProductos);
+      // Mostrar colecciones aunque todavía no tengan productos activos.
+      // Si el admin borra productos, la sección "Nuestras colecciones" debe seguir visible.
+      _coleccionesData = Array.isArray(colecciones) ? colecciones : [];
+      renderColeccionFilterButtons(_coleccionesData);
 
       filteredProducts = [...allProducts];
       renderCatalog();
@@ -298,7 +296,7 @@ function renderCatalog() {
   renderCatalogSlider('catalog', normalProducts);
   renderCatalogSlider('colecciones', collectionProducts);
   const collectionsSection = document.getElementById('colecciones-subsection');
-  if (collectionsSection) collectionsSection.style.display = collectionProducts.length ? '' : 'none';
+  if (collectionsSection) collectionsSection.style.display = (_coleccionesData.length || collectionProducts.length) ? '' : 'none';
 }
 
 function renderCatalogSlider(prefix, products) {
@@ -312,12 +310,18 @@ function renderCatalogSlider(prefix, products) {
   });
 
   if (products.length === 0) {
-    const emptyTitle = !isCollections && currentCategory === 'todos' && currentColeccion === 'todas' && !searchQuery.trim()
+    const isBaseProductEmpty = !isCollections && currentCategory === 'todos' && currentColeccion === 'todas' && !searchQuery.trim();
+    const isBaseCollectionEmpty = isCollections && currentColeccion === 'todas' && !searchQuery.trim();
+    const emptyTitle = isBaseProductEmpty
       ? 'A\u00fan no hay productos publicados'
-      : 'No encontramos ese capricho';
-    const emptyDescription = !isCollections && currentCategory === 'todos' && currentColeccion === 'todas' && !searchQuery.trim()
+      : isBaseCollectionEmpty
+        ? 'Colecciones listas, productos pendientes'
+        : 'No encontramos ese capricho';
+    const emptyDescription = isBaseProductEmpty
       ? 'Pronto aparecer\u00e1n aqu\u00ed nuestros productos disponibles.'
-      : 'Prueba buscando con palabras sencillas como "taza", "termo", "vela" o "bolsa".';
+      : isBaseCollectionEmpty
+        ? 'Las colecciones ya existen. Cuando generes o asignes productos, aparecer\u00e1n aqu\u00ed agrupados por dise\u00f1o.'
+        : 'Prueba buscando con palabras sencillas como "taza", "termo", "vela" o "bolsa".';
     slider.innerHTML = `
       <div class="empty-state">
         <img src="assets/mascotas/STICKER/sticker pensando.webp" alt="Flik pensando">
