@@ -295,8 +295,6 @@ function groupCollectionProducts(products) {
 function renderCatalog() {
   const normalProducts = filteredProducts.filter(p => !p.coleccion);
   const collectionProducts = groupCollectionProducts(filteredProducts.filter(p => p.coleccion));
-  const productsSection = document.getElementById('productos-subsection');
-  if (productsSection) productsSection.style.display = normalProducts.length ? '' : 'none';
   renderCatalogSlider('catalog', normalProducts);
   renderCatalogSlider('colecciones', collectionProducts);
   const collectionsSection = document.getElementById('colecciones-subsection');
@@ -506,15 +504,15 @@ let _coleccionesData = [];
 
 function relocateCollectionControls() {
   const section = document.getElementById('colecciones-subsection');
-  const heading = section && section.querySelector('.catalog-subsection-heading');
-  if (!section || !heading || !coleccionFilterContainer || !coleccionBannerEl) return;
+  const slot = section && section.querySelector('#collections-controls-slot');
+  if (!section || !slot || !coleccionFilterContainer || !coleccionBannerEl) return;
   let label = section.querySelector('.collection-filter-label');
   if (!label) {
     label = document.createElement('p');
     label.className = 'collection-filter-label';
     label.textContent = 'Filtrar colecciones';
   }
-  heading.before(label, coleccionFilterContainer, coleccionBannerEl);
+  slot.append(label, coleccionFilterContainer, coleccionBannerEl);
 }
 relocateCollectionControls();
 

@@ -127,17 +127,100 @@
     .logout-btn:hover { color: var(--white); border-color: var(--white); }
 
     .admin-body {
-      max-width: 1100px;
+      max-width: 1220px;
       margin: 0 auto;
       padding: 40px 24px 80px;
+    }
+    .admin-hero-panel {
+      background: linear-gradient(135deg, rgba(255,253,248,.96), rgba(223,191,255,.24));
+      border: 2px solid var(--forest);
+      border-radius: 26px;
+      box-shadow: var(--shadow);
+      padding: 24px;
+      margin-bottom: 28px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: center;
+    }
+    .admin-hero-panel h2 {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 30px;
+      margin: 0 0 6px;
+      color: var(--forest);
+    }
+    .admin-hero-panel p {
+      margin: 0;
+      color: var(--olive);
+      font-weight: 700;
+      line-height: 1.5;
+    }
+    .admin-quick-nav {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .admin-quick-nav a {
+      background: var(--white);
+      border: 2px solid rgba(28,79,50,.88);
+      border-radius: 18px;
+      padding: 14px 16px;
+      box-shadow: 4px 5px 0 rgba(28,79,50,.14);
+      color: var(--forest);
+      text-decoration: none;
+      font: 900 14px 'Fredoka', sans-serif;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: .15s;
+    }
+    .admin-quick-nav a:hover {
+      transform: translateY(-2px);
+      box-shadow: 6px 7px 0 rgba(28,79,50,.18);
+      background: var(--cream);
+    }
+    .admin-quick-nav small {
+      color: var(--olive);
+      font: 800 11px 'Nunito', sans-serif;
+      line-height: 1.25;
+    }
+    .admin-section {
+      background: rgba(255,253,248,.78);
+      border: 2px solid rgba(28,79,50,.28);
+      border-radius: 26px;
+      padding: 24px;
+      margin-bottom: 34px;
+      box-shadow: 0 16px 40px rgba(28,79,50,.08);
+      scroll-margin-top: 86px;
+    }
+    .admin-section-title {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    .admin-section-title h2,
+    .admin-section-title h3 {
+      font-family: 'Fredoka', sans-serif;
+      color: var(--forest);
+      margin: 0;
+    }
+    .admin-section-title p {
+      color: var(--olive);
+      font-size: 13px;
+      line-height: 1.45;
+      margin: 4px 0 0;
+      max-width: 720px;
     }
 
     /* ── STATS BAR ── */
     .stats-bar {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 18px;
-      margin-bottom: 40px;
+      margin-bottom: 24px;
     }
     .stat-card {
       background: var(--white);
@@ -227,7 +310,7 @@
       border-radius: 18px;
       box-shadow: var(--shadow);
       overflow: hidden;
-      margin-bottom: 48px;
+      margin-bottom: 0;
     }
     .product-table table {
       width: 100%;
@@ -586,10 +669,11 @@
 
     /* ── Gestor de diseños ── */
     .design-card {
-      background: var(--cream);
-      border-radius: 20px;
-      border-left: 6px solid var(--grape);
-      box-shadow: 8px 10px 0 rgba(28,79,50,.1);
+      background: linear-gradient(135deg, #fffdf8, #f8f4ec);
+      border-radius: 24px;
+      border: 2px solid rgba(28,79,50,.18);
+      border-left: 8px solid var(--grape);
+      box-shadow: 10px 14px 0 rgba(28,79,50,.09);
       overflow: hidden;
       position: relative;
     }
@@ -605,9 +689,9 @@
       box-shadow: 2px 3px 0 rgba(28,79,50,.25); transition: .15s;
     }
     .design-remove-btn:hover { transform: scale(1.08) rotate(8deg); }
-    .design-card-body { display: grid; grid-template-columns: minmax(320px, 390px) minmax(360px, 1fr); gap: 30px; padding: 10px 26px 26px; align-items: start; }
+    .design-card-body { display: grid; grid-template-columns: minmax(380px, 450px) minmax(420px, 1fr); gap: 34px; padding: 10px 26px 28px; align-items: start; }
     .design-editor-col { min-width: 0; }
-    .design-editor-hint { font-size: 12px; color: var(--olive); margin-bottom: 10px; font-weight: 700; line-height: 1.4; }
+    .design-editor-hint { display:block; font-size: 12px; color: var(--olive); margin-bottom: 10px; font-weight: 800; line-height: 1.4; }
     .design-mockup-select, .design-coleccion-select {
       appearance: none; -webkit-appearance: none;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%231c4f32'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
@@ -620,10 +704,22 @@
       box-shadow: 0 2px 5px rgba(28,79,50,.06);
     }
     .design-canvas-frame {
-      background: var(--white); border-radius: 18px; padding: 14px; width: fit-content;
-      box-shadow: 0 14px 34px rgba(28,79,50,.14); transform: none;
+      background:
+        linear-gradient(45deg, rgba(28,79,50,.045) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(28,79,50,.045) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(28,79,50,.045) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(28,79,50,.045) 75%),
+        var(--white);
+      background-size: 18px 18px;
+      background-position: 0 0, 0 9px, 9px -9px, -9px 0;
+      border: 2px solid rgba(28,79,50,.16);
+      border-radius: 22px;
+      padding: 16px;
+      width: fit-content;
+      box-shadow: 0 18px 42px rgba(28,79,50,.14);
+      transform: none;
     }
-    .design-canvas-frame canvas { display: block; cursor: move; touch-action: none; border-radius: 12px; width: 340px; height: 420px; max-width: 100%; }
+    .design-canvas-frame canvas { display: block; cursor: move; touch-action: none; border-radius: 14px; width: 390px; height: 482px; max-width: 100%; }
     .design-readout { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
     .design-readout span {
       background: rgba(195,236,159,.55); color: var(--forest); font: 800 11px 'Nunito';
@@ -631,6 +727,7 @@
     }
     .design-manual-controls {
       display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px;
+      background: rgba(28,79,50,.055); border-radius: 18px; padding: 12px;
     }
     .design-control {
       background: rgba(255,255,255,.72); border: 1.5px solid rgba(28,79,50,.14);
@@ -727,10 +824,14 @@
     .design-cut-bulk button:hover { background: var(--grape); color: var(--white); }
     @media (max-width: 980px) {
       .design-card-body { grid-template-columns: 1fr; }
-      .design-canvas-frame canvas { width: min(340px, calc(100vw - 94px)); height: auto; aspect-ratio: 340 / 420; }
+      .design-canvas-frame canvas { width: min(390px, calc(100vw - 94px)); height: auto; aspect-ratio: 390 / 482; }
+      .admin-quick-nav { grid-template-columns: repeat(2, 1fr); }
+      .admin-hero-panel { grid-template-columns: 1fr; }
     }
     @media (max-width: 560px) {
       .design-manual-controls { grid-template-columns: 1fr; }
+      .admin-quick-nav { grid-template-columns: 1fr; }
+      .admin-section { padding: 18px 12px; border-radius: 20px; }
     }
 
     /* ── SCRAPBOOK BOUTIQUE UPGRADES ── */
@@ -869,6 +970,21 @@
 
   <div class="admin-body">
 
+    <div class="admin-hero-panel">
+      <div>
+        <h2>Centro de control del catálogo</h2>
+        <p>Administra productos normales, colecciones, diseños de playera y mockups desde bloques separados. Menos scroll mental, menos errores.</p>
+      </div>
+      <a class="btn-primary" style="background:var(--forest); text-decoration:none; display:inline-flex; align-items:center;" href="https://catalogo.manekistore.com.mx/" target="_blank" rel="noopener noreferrer">👁 Ver catálogo público</a>
+    </div>
+
+    <nav class="admin-quick-nav" aria-label="Navegación rápida del admin">
+      <a href="#admin-productos">📦 Productos <small>Crear, editar, filtrar y eliminar productos sueltos.</small></a>
+      <a href="#admin-disenos">🎨 Diseños <small>Subir PNG, ajustar posición y generar variantes.</small></a>
+      <a href="#admin-colecciones">🎬 Colecciones <small>Crear temas, QR y agrupaciones del catálogo.</small></a>
+      <a href="#admin-mockups">👕 Mockups <small>Playeras base reusables por color y corte.</small></a>
+    </nav>
+
     <!-- Stats -->
     <div class="stats-bar">
       <div class="stat-card">
@@ -904,9 +1020,13 @@
     <div id="pending-chips" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:24px;"></div>
 
     <!-- Tabla de productos -->
-    <div class="section-heading">
-      <h2>Catálogo de productos</h2>
-      <div style="display:flex; gap:10px; align-items:center;">
+    <section class="admin-section" id="admin-productos">
+    <div class="admin-section-title">
+      <div>
+        <h2>Catálogo de productos</h2>
+        <p>Productos sueltos del catálogo general. Las colecciones se manejan abajo para no mezclar flujos.</p>
+      </div>
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
         <button class="btn-save-sm" style="background:var(--white);color:var(--forest);" onclick="exportProductsCSV()">⬇ Exportar CSV</button>
         <button class="btn-primary" onclick="openModal()">+ Agregar producto</button>
       </div>
@@ -943,45 +1063,58 @@
           </tr>
         </thead>
         <tbody id="products-tbody">
-          <tr class="empty-row"><td colspan="7">No hay productos aún. ¡Agrega el primero! ✦</td></tr>
+          <tr class="empty-row"><td colspan="8">No hay productos aún. ¡Agrega el primero! ✦</td></tr>
         </tbody>
       </table>
     </div>
 
     <!-- Exportar -->
-    <div style="display:flex;gap:14px;flex-wrap:wrap; margin-bottom:32px;">
+    <div style="display:flex;gap:14px;flex-wrap:wrap; margin-top:20px;">
       <button class="btn-primary" style="background:var(--olive)" onclick="exportJSON()">⬇ Exportar JSON</button>
       <button class="btn-primary" style="background:var(--butter);color:var(--forest)" onclick="document.getElementById('import-input').click()">⬆ Importar JSON</button>
       <input type="file" id="import-input" accept=".json" style="display:none" onchange="importJSON(event)">
       <button class="btn-primary" style="background:var(--grape)" onclick="exportFullBackup()">📦 Respaldo completo</button>
       <a class="btn-primary" style="background:var(--forest); text-decoration:none; display:inline-flex; align-items:center;" href="https://catalogo.manekistore.com.mx/" target="_blank" rel="noopener noreferrer">👁 Ver catálogo público</a>
     </div>
+    </section>
 
     <!-- Gestor de diseños: subida tipo Redbubble, editor individual por diseño -->
-    <div class="config-box">
-      <h3>🎨 Diseños de playera</h3>
-      <p>Sube uno o varios PNG transparentes. Cada diseño trae su propio editor visual (arrastra para mover, arrastra la esquina para escalar), su propio set de colores/mockups y su propia colección. Genera hasta 4 productos por diseño (Hombre/Mujer/Juvenil/Niños).</p>
+    <section class="config-box admin-section" id="admin-disenos">
+      <div class="admin-section-title">
+        <div>
+          <h3>🎨 Diseños de playera</h3>
+          <p>Sube PNG transparentes, ajusta tamaño/posición con mouse o valores manuales y genera variantes por corte/color.</p>
+        </div>
+      </div>
       <div class="file-input-wrapper">
         <input type="file" id="design-upload-input" accept="image/png" multiple>
       </div>
       <div id="design-manager-list" style="margin-top:18px; display:flex; flex-direction:column; gap:20px;"></div>
-    </div>
+    </section>
 
     <!-- Colecciones -->
-    <div class="config-box">
-      <h3>🎬 Colecciones</h3>
-      <p>Crea la colección una vez (ej. "Mario Movie") y luego elígela en cada producto desde un menú — evita duplicados por escribirla distinto cada vez. Cada colección puede tener su propia descripción y banner.</p>
+    <section class="config-box admin-section" id="admin-colecciones">
+      <div class="admin-section-title">
+        <div>
+          <h3>🎬 Colecciones</h3>
+          <p>Crea la colección una vez y úsala al generar productos. Esto mantiene el catálogo público separado entre productos generales y colecciones.</p>
+        </div>
+      </div>
       <div style="display:flex; gap:10px; margin-bottom:14px;">
         <button type="button" class="btn-save-sm" onclick="openColeccionModal()">+ Nueva colección</button>
         <button type="button" class="btn-save-sm" style="background:var(--white);color:var(--forest);" onclick="generarQR('https://catalogo.manekistore.com.mx/', 'Catálogo completo')">🔲 QR del catálogo</button>
       </div>
       <div id="coleccion-list" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
-    </div>
+    </section>
 
     <!-- Mockups de playeras reusables -->
-    <div class="config-box">
-      <h3>👕 Mockups de playeras (reusables)</h3>
-      <p>Sube tu foto de playera lisa una vez por color. Las reusas en cualquier producto/colección sin volver a subirlas.</p>
+    <section class="config-box admin-section" id="admin-mockups">
+      <div class="admin-section-title">
+        <div>
+          <h3>👕 Mockups de playeras</h3>
+          <p>Sube playeras lisas una sola vez por corte/color. Luego los diseños las reutilizan sin volver a cargar imágenes.</p>
+        </div>
+      </div>
       <div class="config-row" style="flex-wrap:wrap; gap:14px; align-items:flex-end;">
         <div class="form-group">
           <label>Foto (playera lisa, sin diseño)</label>
@@ -1001,7 +1134,7 @@
         <summary style="cursor:pointer; font-weight:700; color:var(--forest); font-size:13px;">Ver mockups ya cargados (<span id="mockup-count">0</span>)</summary>
         <div id="mockup-list" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;"></div>
       </details>
-    </div>
+    </section>
 
     <!-- WhatsApp Config -->
     <div class="config-box">
