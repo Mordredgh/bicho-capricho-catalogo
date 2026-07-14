@@ -1,9 +1,9 @@
-const CACHE_NAME = "bicho-capricho-v34-20260713";
+const CACHE_NAME = "bicho-capricho-v35-20260713";
 const ASSETS = [
   "./",
   "./index.html",
-  "./dist/styles.min.css?v=20260713-v34",
-  "./dist/catalogo.min.js?v=20260713-v34",
+  "./dist/styles.min.css?v=20260713-v35",
+  "./dist/catalogo.min.js?v=20260713-v35",
   "./supabase-config.js",
   "./manifest.json",
   "./assets/favicon-32.png",

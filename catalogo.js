@@ -1729,7 +1729,7 @@ loadWishlist();
 // ── B. EFECTO TYPEWRITER EN HERO ────────────────────
 function initTypewriter() {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const words = ['regalo', 'capricho', 'detalle', 'sorpresa', 'momento'];
+  const words = ['regalo', 'capricho', 'detalle', 'recuerdo', 'momento'];
   const el = document.getElementById('hero-typewriter-text');
   if (!el) return;
 
