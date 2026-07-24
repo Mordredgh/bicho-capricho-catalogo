@@ -1,3 +1,6 @@
 node_modules/
 dist/
 .DS_Store
+
+# graphify (mapa de código local, regenerar con graphify --update)
+graphify-out/
